@@ -2,6 +2,7 @@ import React, { memo, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, RADIUS } from '../utils/constants';
+import { nd } from '../utils/platform';
 
 /**
  * Premium connection banner with animated gradient border.
@@ -15,13 +16,13 @@ const ConnectionBanner = ({ status, onRetry }) => {
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 0, tension: 70, friction: 9, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, tension: 70, friction: 9, useNativeDriver: nd }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: nd }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideAnim, { toValue: -60, duration: 250, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: -60, duration: 250, useNativeDriver: nd }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: nd }),
       ]).start();
     }
   }, [visible]);
@@ -34,8 +35,8 @@ const ConnectionBanner = ({ status, onRetry }) => {
         styles.container,
         { transform: [{ translateY: slideAnim }], opacity: opacityAnim },
         !visible && styles.hidden,
+        { pointerEvents: visible ? 'auto' : 'none' },
       ]}
-      pointerEvents={visible ? 'auto' : 'none'}
     >
       <LinearGradient
         colors={isConnecting

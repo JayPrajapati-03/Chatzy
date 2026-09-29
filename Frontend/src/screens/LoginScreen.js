@@ -16,6 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, GRADIENTS, RADIUS, SHADOW, FONTS } from '../utils/constants';
+import { nd } from '../utils/platform';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,13 +31,13 @@ const FloatingOrb = ({ style, color, size, delay = 0 }) => {
           toValue: 1,
           duration: 4000,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
         Animated.timing(anim, {
           toValue: 0,
           duration: 4000,
           easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
       ])
     ).start();
@@ -80,26 +81,26 @@ export default function LoginScreen() {
   useEffect(() => {
     // Entry animation
     Animated.stagger(120, [
-      Animated.spring(logoAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
-      Animated.spring(cardAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
+      Animated.spring(logoAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: nd }),
+      Animated.spring(cardAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: nd }),
     ]).start();
 
     // Logo pulse
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.07, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.07, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: nd }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: nd }),
       ])
     ).start();
   }, []);
 
   const shake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 12, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -12, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 8, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 12, duration: 55, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: -12, duration: 55, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 55, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: nd }),
     ]).start();
   };
 
@@ -141,7 +142,7 @@ export default function LoginScreen() {
       <FloatingOrb color={COLORS.accentViolet} size={160} style={{ bottom: 200, left: -40 }} delay={1200} />
 
       {/* Grid overlay */}
-      <View style={styles.gridOverlay} pointerEvents="none" />
+      <View style={[styles.gridOverlay, { pointerEvents: 'none' }]} />
 
       <KeyboardAvoidingView
         style={styles.kav}
@@ -394,11 +395,16 @@ const styles = StyleSheet.create({
   },
   inputContainerFocused: {
     borderColor: COLORS.accentCyan,
-    shadowColor: COLORS.accentCyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 0 10px rgba(0, 212, 255, 0.3)' },
+      default: {
+        shadowColor: COLORS.accentCyan,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 8,
+      },
+    }),
   },
   inputPrefix: {
     fontSize: 20,

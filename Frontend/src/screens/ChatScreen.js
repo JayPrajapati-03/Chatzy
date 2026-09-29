@@ -34,6 +34,7 @@ import ConnectionBanner from '../components/ConnectionBanner';
 
 import { COLORS, GRADIENTS, DEFAULT_ROOM, HISTORY_LIMIT, FONTS, RADIUS, SHADOW } from '../utils/constants';
 import { formatDateLabel, isDifferentDay } from '../utils/formatTime';
+import { nd } from '../utils/platform';
 
 // ── Date Separator ────────────────────────────────────────────────────────────
 const DateSep = ({ label }) => (
@@ -82,8 +83,8 @@ const StatusDot = ({ status }) => {
     if (status === 'connected') {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulse, { toValue: 1.6, duration: 1000, useNativeDriver: true }),
-          Animated.timing(pulse, { toValue: 1,   duration: 1000, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1.6, duration: 1000, useNativeDriver: nd }),
+          Animated.timing(pulse, { toValue: 1,   duration: 1000, useNativeDriver: nd }),
         ])
       ).start();
     } else {
@@ -132,7 +133,7 @@ export default function ChatScreen() {
 
   // Entry animation
   useEffect(() => {
-    Animated.spring(headerAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }).start();
+    Animated.spring(headerAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: nd }).start();
   }, []);
 
   // Load history

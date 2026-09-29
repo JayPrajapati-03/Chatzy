@@ -1,7 +1,8 @@
 import React, { memo, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, GRADIENTS, RADIUS, FONTS } from '../utils/constants';
+import { nd } from '../utils/platform';
 import { formatTime } from '../utils/formatTime';
 
 // ── Tick Icons ────────────────────────────────────────────────────────────────
@@ -42,7 +43,7 @@ const MessageBubble = ({ message, isMine }) => {
       toValue: 1,
       tension: 80,
       friction: 9,
-      useNativeDriver: true,
+      useNativeDriver: nd,
     }).start();
   }, []);
 
@@ -147,11 +148,16 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
     borderWidth: 1,
     borderColor: 'rgba(0,212,255,0.12)',
-    shadowColor: '#00D4FF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      web: { boxShadow: '0 2px 8px rgba(0, 212, 255, 0.15)' },
+      default: {
+        shadowColor: '#00D4FF',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
+      },
+    }),
   },
   bubbleOther: {
     backgroundColor: COLORS.bgFloat,

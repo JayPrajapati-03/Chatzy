@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, GRADIENTS, RADIUS, FONTS, TYPING_STOP_DELAY_MS, MESSAGE_MAX_LENGTH } from '../utils/constants';
+import { nd } from '../utils/platform';
 
 /**
  * Premium MessageInput — frosted glass input bar with animated send button.
@@ -51,8 +52,8 @@ const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
 
     // Pop animation
     Animated.sequence([
-      Animated.spring(sendScale, { toValue: 0.82, speed: 80, useNativeDriver: true }),
-      Animated.spring(sendScale, { toValue: 1,    speed: 80, useNativeDriver: true }),
+      Animated.spring(sendScale, { toValue: 0.82, speed: 80, useNativeDriver: nd }),
+      Animated.spring(sendScale, { toValue: 1,    speed: 80, useNativeDriver: nd }),
     ]).start();
 
     clearTimeout(typingTimerRef.current);
@@ -151,11 +152,16 @@ const styles = StyleSheet.create({
   },
   inputPillFocused: {
     borderColor: COLORS.accentCyan,
-    shadowColor: COLORS.accentCyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 0 10px rgba(0, 212, 255, 0.25)' },
+      default: {
+        shadowColor: COLORS.accentCyan,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+        elevation: 8,
+      },
+    }),
   },
   input: {
     fontSize: 15,

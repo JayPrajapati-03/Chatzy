@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { COLORS, FONTS, RADIUS } from '../utils/constants';
+import { nd } from '../utils/platform';
 
 /**
  * Premium animated typing indicator with pulsing dots and blurred background.
@@ -16,10 +17,10 @@ const TypingIndicator = ({ typingUsers }) => {
 
   useEffect(() => {
     if (isVisible && !prevVisible.current) {
-      Animated.spring(entryAnim, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }).start();
+      Animated.spring(entryAnim, { toValue: 1, tension: 70, friction: 9, useNativeDriver: nd }).start();
       prevVisible.current = true;
     } else if (!isVisible && prevVisible.current) {
-      Animated.timing(entryAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+      Animated.timing(entryAnim, { toValue: 0, duration: 200, useNativeDriver: nd }).start();
       prevVisible.current = false;
     }
   }, [isVisible]);
@@ -29,8 +30,8 @@ const TypingIndicator = ({ typingUsers }) => {
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
-          Animated.timing(dot, { toValue: 1, duration: 380, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(dot, { toValue: 0, duration: 380, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 1, duration: 380, easing: Easing.inOut(Easing.ease), useNativeDriver: nd }),
+          Animated.timing(dot, { toValue: 0, duration: 380, easing: Easing.inOut(Easing.ease), useNativeDriver: nd }),
           Animated.delay(400),
         ])
       ).start();
