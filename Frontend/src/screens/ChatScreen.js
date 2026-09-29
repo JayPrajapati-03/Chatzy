@@ -442,7 +442,12 @@ export default function ChatScreen() {
           </LinearGradient>
 
           <View>
-            <Text style={styles.roomName}>Chatzy Global</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.roomName}>Chatzy Global</Text>
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedCheck}>✓</Text>
+              </View>
+            </View>
             <TouchableOpacity
               style={styles.statusRow}
               activeOpacity={0.7}
@@ -628,11 +633,29 @@ const styles = StyleSheet.create({
     fontWeight: FONTS.black,
     color: COLORS.accentCyan,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   roomName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: FONTS.bold,
     color: COLORS.textPrimary,
-    letterSpacing: 0.3,
+    letterSpacing: -0.3,
+  },
+  verifiedBadge: {
+    width: 17,
+    height: 17,
+    borderRadius: 9,
+    backgroundColor: COLORS.accentCyan,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verifiedCheck: {
+    color: '#0b0f19',
+    fontSize: 10,
+    fontWeight: FONTS.black,
   },
   statusRow: {
     flexDirection: 'row',

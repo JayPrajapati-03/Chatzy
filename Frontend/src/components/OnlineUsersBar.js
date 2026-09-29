@@ -6,6 +6,7 @@ const MAX_VISIBLE_CHIPS = 4;
 
 /**
  * Production-level adaptive online users bar.
+ * Displays "ACTIVE NOW:" label + user chips.
  * When <= 4 users: displays all user chips.
  * When > 4 users: displays top 4 users + sleek [+N more] button.
  * Clicking any user chip or [+N more] opens the full searchable members sheet.
@@ -23,6 +24,9 @@ const OnlineUsersBar = ({ users, onOpenMembersModal }) => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
+        {/* Active Now Label */}
+        <Text style={styles.activeLabel}>ACTIVE NOW:</Text>
+
         {visibleUsers.map((u, i) => {
           const initial = (u.displayName || u.username || '?').charAt(0).toUpperCase();
           const isOnline = u.isOnline !== undefined ? u.isOnline : true;
@@ -35,14 +39,14 @@ const OnlineUsersBar = ({ users, onOpenMembersModal }) => {
               onPress={onOpenMembersModal}
             >
               <View style={styles.avatarWrapper}>
-                <View style={[styles.chipAvatar, { backgroundColor: u.avatarColor || COLORS.accentCyan }]}>
+                <View style={[styles.chipAvatar, { backgroundColor: u.avatarColor || COLORS.accentGreen }]}>
                   <Text style={styles.chipInitial}>{initial}</Text>
                 </View>
-                {/* Instagram-style status dot */}
+                {/* Subtle presence dot */}
                 <View
                   style={[
-                    styles.statusDot,
-                    { backgroundColor: isOnline ? COLORS.accentGreen : COLORS.textMuted }
+                    styles.presenceDot,
+                    { backgroundColor: isOnline ? '#00f5ff' : COLORS.textMuted }
                   ]}
                 />
               </View>
@@ -68,57 +72,64 @@ const OnlineUsersBar = ({ users, onOpenMembersModal }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.bgElevated,
+    backgroundColor: COLORS.bgSurface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.borderGlass,
   },
   scroll: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+  },
+  activeLabel: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    fontWeight: FONTS.bold,
+    letterSpacing: 0.8,
+    marginRight: 2,
   },
   userChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.bgFloat,
+    backgroundColor: COLORS.white06,
     borderRadius: RADIUS.full,
     paddingRight: 10,
     paddingLeft: 4,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderWidth: 1,
     borderColor: COLORS.borderGlass,
-    gap: 7,
+    gap: 6,
   },
   avatarWrapper: {
     position: 'relative',
   },
   chipAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
   chipInitial: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: FONTS.bold,
     color: COLORS.white,
   },
-  statusDot: {
+  presenceDot: {
     position: 'absolute',
     bottom: -1,
     right: -1,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: COLORS.bgFloat,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: COLORS.bgSurface,
   },
   chipName: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: FONTS.medium,
+    fontSize: 12,
+    color: COLORS.textPrimary,
+    fontWeight: FONTS.semibold,
     maxWidth: 75,
   },
   moreChip: {
