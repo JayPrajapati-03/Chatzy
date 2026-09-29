@@ -388,9 +388,18 @@ export default function ChatScreen() {
     ({ item }) => {
       if (item.type === 'DATE_SEPARATOR') return <DateSep label={item.label} />;
       const isMine = item.data.senderId === user?._id || item.data.senderUsername === user?.username;
-      return <MessageBubble message={item.data} isMine={isMine} />;
+      const isSenderOnline = !isMine && onlineUsers.some(
+        (u) => u.userId === item.data.senderId || u.username === item.data.senderUsername
+      );
+      return (
+        <MessageBubble
+          message={item.data}
+          isMine={isMine}
+          isSenderOnline={isSenderOnline}
+        />
+      );
     },
-    [user]
+    [user, onlineUsers]
   );
 
   const keyExtractor = useCallback((item) => item.id, []);
@@ -439,8 +448,16 @@ export default function ChatScreen() {
 
         {/* User avatar + logout */}
         <View style={styles.headerRight}>
-          <View style={[styles.myAvatar, { backgroundColor: user?.avatarColor || COLORS.accentCyan }]}>
-            <Text style={styles.myAvatarText}>{userInitial}</Text>
+          <View style={styles.myAvatarWrap}>
+            <View style={[styles.myAvatar, { backgroundColor: user?.avatarColor || COLORS.accentCyan }]}>
+              <Text style={styles.myAvatarText}>{userInitial}</Text>
+            </View>
+            <View
+              style={[
+                styles.myStatusBadge,
+                { backgroundColor: connStatus === 'connected' ? COLORS.accentGreen : COLORS.textMuted }
+              ]}
+            />
           </View>
           <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.7}>
             <Text style={styles.logoutText}>Exit</Text>
@@ -578,6 +595,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  myAvatarWrap: {
+    position: 'relative',
+  },
   myAvatar: {
     width: 34,
     height: 34,
@@ -586,6 +606,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: COLORS.borderGlass,
+  },
+  myStatusBadge: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#161B27',
   },
   myAvatarText: {
     fontSize: 14,

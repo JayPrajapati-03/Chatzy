@@ -15,17 +15,25 @@ const StatusTick = ({ status }) => {
 };
 
 // ── Avatar Circle ─────────────────────────────────────────────────────────────
-const Avatar = ({ name, color }) => {
+const Avatar = ({ name, color, isOnline }) => {
   const initial = (name || '?').charAt(0).toUpperCase();
   return (
-    <View style={[styles.avatar, { backgroundColor: color || COLORS.accentCyan }]}>
-      <Text style={styles.avatarText}>{initial}</Text>
+    <View style={styles.avatarWrap}>
+      <View style={[styles.avatar, { backgroundColor: color || COLORS.accentCyan }]}>
+        <Text style={styles.avatarText}>{initial}</Text>
+      </View>
+      <View
+        style={[
+          styles.statusBadge,
+          { backgroundColor: isOnline ? COLORS.accentGreen : COLORS.textMuted }
+        ]}
+      />
     </View>
   );
 };
 
 // ── Message Bubble ─────────────────────────────────────────────────────────────
-const MessageBubble = ({ message, isMine }) => {
+const MessageBubble = ({ message, isMine, isSenderOnline = false }) => {
   const {
     text,
     senderDisplayName,
@@ -62,7 +70,11 @@ const MessageBubble = ({ message, isMine }) => {
     >
       {/* Other's avatar */}
       {!isMine && (
-        <Avatar name={displayName} color={senderAvatarColor} />
+        <Avatar
+          name={displayName}
+          color={senderAvatarColor}
+          isOnline={isSenderOnline}
+        />
       )}
 
       <View style={styles.bubbleWrap}>
@@ -113,14 +125,27 @@ const styles = StyleSheet.create({
   rowMine: { justifyContent: 'flex-end' },
   rowOther: { justifyContent: 'flex-start' },
 
+  avatarWrap: {
+    position: 'relative',
+    marginRight: 8,
+  },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
     flexShrink: 0,
+  },
+  statusBadge: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    borderWidth: 1.5,
+    borderColor: COLORS.bgBase,
   },
   avatarText: {
     fontSize: 13,
