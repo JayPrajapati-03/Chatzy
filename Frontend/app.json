@@ -4,29 +4,25 @@
     "slug": "chatzy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#075E54"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jay.chatzy"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#075E54"
-      },
       "package": "com.jay.chatzy",
-      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"]
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
+    "plugins": [
+      "expo-font",
+      "expo-status-bar"
+    ],
     "extra": {
       "eas": {
         "projectId": "your-eas-project-id"

@@ -1,72 +1,77 @@
 import React, { memo, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated
-} from 'react-native';
-import { COLORS } from '../utils/constants';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { COLORS, FONTS, RADIUS } from '../utils/constants';
 
 /**
- * TypingIndicator — animated "... is typing" bar.
- * Renders a WhatsApp-style three-dot bouncing animation.
- * Only shown when `typingUsers` array is non-empty.
- *
- * @param {{ typingUsers: Array<{username: string}> }} props
+ * Premium animated typing indicator with pulsing dots and blurred background.
  */
 const TypingIndicator = ({ typingUsers }) => {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
-  const animRef = useRef(null);
+  const entryAnim = useRef(new Animated.Value(0)).current;
+  const prevVisible = useRef(false);
+
+  const isVisible = typingUsers && typingUsers.length > 0;
 
   useEffect(() => {
-    if (typingUsers.length === 0) return;
+    if (isVisible && !prevVisible.current) {
+      Animated.spring(entryAnim, { toValue: 1, tension: 70, friction: 9, useNativeDriver: true }).start();
+      prevVisible.current = true;
+    } else if (!isVisible && prevVisible.current) {
+      Animated.timing(entryAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+      prevVisible.current = false;
+    }
+  }, [isVisible]);
 
-    const bounce = (dot, delay) =>
+  useEffect(() => {
+    const pulse = (dot, delay) =>
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
-          Animated.timing(dot, { toValue: -5, duration: 200, useNativeDriver: true }),
-          Animated.timing(dot, { toValue: 0, duration: 200, useNativeDriver: true }),
-          Animated.delay(400)
+          Animated.timing(dot, { toValue: 1, duration: 380, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 380, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.delay(400),
         ])
-      );
+      ).start();
 
-    animRef.current = Animated.parallel([
-      bounce(dot1, 0),
-      bounce(dot2, 150),
-      bounce(dot3, 300)
-    ]);
-    animRef.current.start();
+    pulse(dot1, 0);
+    pulse(dot2, 160);
+    pulse(dot3, 320);
+  }, []);
 
-    return () => {
-      animRef.current?.stop();
-      [dot1, dot2, dot3].forEach((d) => d.setValue(0));
-    };
-  }, [typingUsers.length]);
+  if (!isVisible) return null;
 
-  if (typingUsers.length === 0) return null;
+  const names = typingUsers.slice(0, 2).map((u) => u.username).join(', ');
+  const label = typingUsers.length === 1
+    ? `${names} is typing`
+    : typingUsers.length === 2
+    ? `${names} are typing`
+    : 'Several people are typing';
 
-  const names =
-    typingUsers.length === 1
-      ? typingUsers[0].username
-      : typingUsers.length === 2
-      ? `${typingUsers[0].username} & ${typingUsers[1].username}`
-      : 'Several people';
-
-  const label = `${names} ${typingUsers.length === 1 ? 'is' : 'are'} typing`;
+  const mkDotStyle = (anim) => ({
+    transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }],
+    opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
+  });
 
   return (
-    <View style={styles.container}>
-      {/* Animated dots bubble */}
-      <View style={styles.bubble}>
-        <Animated.View style={[styles.dot, { transform: [{ translateY: dot1 }] }]} />
-        <Animated.View style={[styles.dot, { transform: [{ translateY: dot2 }] }]} />
-        <Animated.View style={[styles.dot, { transform: [{ translateY: dot3 }] }]} />
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          opacity: entryAnim,
+          transform: [{ translateY: entryAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+        },
+      ]}
+    >
+      {/* Dots */}
+      <View style={styles.dotsRow}>
+        {[mkDotStyle(dot1), mkDotStyle(dot2), mkDotStyle(dot3)].map((s, i) => (
+          <Animated.View key={i} style={[styles.dot, s]} />
+        ))}
       </View>
-      <Text style={styles.label}>{label}</Text>
-    </View>
+      <Text style={styles.label}>{label}…</Text>
+    </Animated.View>
   );
 };
 
@@ -74,31 +79,33 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 6,
-    gap: 8
+    gap: 10,
   },
-  bubble: {
+  dotsRow: {
     flexDirection: 'row',
-    gap: 4,
-    backgroundColor: COLORS.bubbleOther,
-    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: COLORS.bgFloat,
+    borderRadius: RADIUS.full,
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    alignItems: 'center'
+    paddingVertical: 7,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: COLORS.borderGlass,
   },
   dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: COLORS.textSecondary
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.accentCyan,
   },
   label: {
     fontSize: 12,
     color: COLORS.textSecondary,
     fontStyle: 'italic',
-    flexShrink: 1
-  }
+    fontWeight: FONTS.medium,
+  },
 });
 
 export default memo(TypingIndicator);

@@ -5,28 +5,26 @@ import {
   TouchableOpacity,
   StyleSheet,
   Text,
-  Platform
+  Platform,
+  Animated,
 } from 'react-native';
-import { COLORS, MESSAGE_MAX_LENGTH, TYPING_STOP_DELAY_MS } from '../utils/constants';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, GRADIENTS, RADIUS, FONTS, TYPING_STOP_DELAY_MS, MESSAGE_MAX_LENGTH } from '../utils/constants';
 
 /**
- * MessageInput — fixed bottom input bar with send button.
- * Calls onTypingStart / onTypingStop for debounced typing indicators.
- * Calls onSend(text) when the user submits.
- *
- * @param {{ onSend, onTypingStart, onTypingStop, disabled }} props
+ * Premium MessageInput — frosted glass input bar with animated send button.
  */
 const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
   const [text, setText] = useState('');
+  const [focused, setFocused] = useState(false);
   const typingTimerRef = useRef(null);
-  const isTypingRef = useRef(false);
+  const isTypingRef   = useRef(false);
+  const sendScale     = useRef(new Animated.Value(1)).current;
 
   const handleChangeText = useCallback(
     (value) => {
       setText(value);
-
       if (!value.trim()) {
-        // Cleared — stop typing immediately
         if (isTypingRef.current) {
           isTypingRef.current = false;
           clearTimeout(typingTimerRef.current);
@@ -34,14 +32,10 @@ const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
         }
         return;
       }
-
-      // Emit typing:start (idempotent — server deduplicates)
       if (!isTypingRef.current) {
         isTypingRef.current = true;
         onTypingStart?.();
       }
-
-      // Reset debounce timer
       clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => {
         isTypingRef.current = false;
@@ -55,107 +49,136 @@ const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
 
-    // Stop typing indicator
+    // Pop animation
+    Animated.sequence([
+      Animated.spring(sendScale, { toValue: 0.82, speed: 80, useNativeDriver: true }),
+      Animated.spring(sendScale, { toValue: 1,    speed: 80, useNativeDriver: true }),
+    ]).start();
+
     clearTimeout(typingTimerRef.current);
     if (isTypingRef.current) {
       isTypingRef.current = false;
       onTypingStop?.();
     }
-
     setText('');
     onSend(trimmed);
-  }, [text, disabled, onSend, onTypingStop]);
+  }, [text, disabled, onSend, onTypingStop, sendScale]);
 
   const canSend = text.trim().length > 0 && !disabled;
 
   return (
     <View style={styles.container}>
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.input}
-          value={text}
-          onChangeText={handleChangeText}
-          onSubmitEditing={handleSend}
-          placeholder="Message..."
-          placeholderTextColor={COLORS.textSecondary}
-          multiline
-          maxLength={MESSAGE_MAX_LENGTH}
-          returnKeyType="send"
-          blurOnSubmit={false}
-          editable={!disabled}
-        />
-      </View>
+      {/* Separator line */}
+      <LinearGradient
+        colors={['transparent', COLORS.accentCyan, 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.topLine}
+      />
 
-      <TouchableOpacity
-        style={[styles.sendButton, canSend ? styles.sendButtonActive : styles.sendButtonInactive]}
-        onPress={handleSend}
-        disabled={!canSend}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.sendIcon}>➤</Text>
-      </TouchableOpacity>
+      <View style={styles.row}>
+        {/* Input pill */}
+        <View style={[styles.inputPill, focused && styles.inputPillFocused]}>
+          <TextInput
+            style={styles.input}
+            value={text}
+            onChangeText={handleChangeText}
+            onSubmitEditing={handleSend}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={disabled ? 'No connection…' : 'Type a message…'}
+            placeholderTextColor={COLORS.textMuted}
+            multiline
+            maxLength={MESSAGE_MAX_LENGTH}
+            returnKeyType="send"
+            blurOnSubmit={false}
+            editable={!disabled}
+            selectionColor={COLORS.accentCyan}
+          />
+        </View>
+
+        {/* Send button */}
+        <Animated.View style={[styles.sendWrap, { transform: [{ scale: sendScale }] }]}>
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={!canSend}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={canSend ? [COLORS.accentCyan, '#0094B5'] : [COLORS.bgInputField, COLORS.bgInputField]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.sendBtn}
+            >
+              <Text style={[styles.sendIcon, !canSend && styles.sendIconOff]}>
+                {canSend ? '▲' : '▲'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: COLORS.bgInput,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+  },
+  topLine: {
+    height: 1,
+    opacity: 0.35,
+    marginBottom: 10,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
-    backgroundColor: COLORS.bgInput,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    gap: 8
+    paddingHorizontal: 14,
+    gap: 10,
   },
-  inputWrapper: {
+  inputPill: {
     flex: 1,
     backgroundColor: COLORS.bgInputField,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    minHeight: 44,
-    maxHeight: 120,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    minHeight: 46,
+    maxHeight: 130,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border
+  },
+  inputPillFocused: {
+    borderColor: COLORS.accentCyan,
+    shadowColor: COLORS.accentCyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
   },
   input: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textPrimary,
     lineHeight: 21,
     padding: 0,
-    margin: 0
+    margin: 0,
+    fontWeight: FONTS.regular,
   },
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  sendWrap: {},
+  sendBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 0,
-    flexShrink: 0
-  },
-  sendButtonActive: {
-    backgroundColor: COLORS.accentGreen,
-    shadowColor: COLORS.accentGreen,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 4
-  },
-  sendButtonInactive: {
-    backgroundColor: COLORS.bgInputField,
-    borderWidth: 1,
-    borderColor: COLORS.border
   },
   sendIcon: {
-    fontSize: 18,
+    fontSize: 16,
     color: COLORS.white,
-    marginLeft: 2
-  }
+    fontWeight: FONTS.bold,
+  },
+  sendIconOff: { color: COLORS.textMuted },
 });
 
 export default MessageInput;

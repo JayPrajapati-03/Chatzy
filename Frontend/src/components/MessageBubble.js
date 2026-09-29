@@ -1,30 +1,29 @@
-import React, { memo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../utils/constants';
+import React, { memo, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, GRADIENTS, RADIUS, FONTS } from '../utils/constants';
 import { formatTime } from '../utils/formatTime';
 
-/**
- * Tick icons for message delivery/read status.
- * Single grey tick = sent, double grey = delivered, double blue = read.
- */
-const StatusTicks = ({ status }) => {
-  if (status === 'read') {
-    return <Text style={[styles.ticks, styles.ticksRead]}>✓✓</Text>;
-  }
-  if (status === 'delivered') {
-    return <Text style={styles.ticks}>✓✓</Text>;
-  }
-  // sent
-  return <Text style={styles.ticks}>✓</Text>;
+// ── Tick Icons ────────────────────────────────────────────────────────────────
+const StatusTick = ({ status }) => {
+  if (status === 'read')
+    return <Text style={[styles.tick, styles.tickRead]}>✓✓</Text>;
+  if (status === 'delivered')
+    return <Text style={[styles.tick, styles.tickDelivered]}>✓✓</Text>;
+  return <Text style={styles.tick}>✓</Text>;
 };
 
-/**
- * MessageBubble — renders a single chat message.
- * Own messages are right-aligned with a green bubble.
- * Others' messages are left-aligned with a dark bubble and show the sender name.
- *
- * @param {{ message: object, isMine: boolean }} props
- */
+// ── Avatar Circle ─────────────────────────────────────────────────────────────
+const Avatar = ({ name, color }) => {
+  const initial = (name || '?').charAt(0).toUpperCase();
+  return (
+    <View style={[styles.avatar, { backgroundColor: color || COLORS.accentCyan }]}>
+      <Text style={styles.avatarText}>{initial}</Text>
+    </View>
+  );
+};
+
+// ── Message Bubble ─────────────────────────────────────────────────────────────
 const MessageBubble = ({ message, isMine }) => {
   const {
     text,
@@ -32,117 +31,161 @@ const MessageBubble = ({ message, isMine }) => {
     senderUsername,
     senderAvatarColor,
     createdAt,
-    status
+    status,
   } = message;
 
   const displayName = senderDisplayName || senderUsername || 'User';
-  const initial = displayName.charAt(0).toUpperCase();
+  const entryAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(entryAnim, {
+      toValue: 1,
+      tension: 80,
+      friction: 9,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const translateX = entryAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [isMine ? 30 : -30, 0],
+  });
 
   return (
-    <View style={[styles.row, isMine ? styles.rowMine : styles.rowOther]}>
-      {/* Avatar — only shown for other users */}
+    <Animated.View
+      style={[
+        styles.row,
+        isMine ? styles.rowMine : styles.rowOther,
+        { opacity: entryAnim, transform: [{ translateX }] },
+      ]}
+    >
+      {/* Other's avatar */}
       {!isMine && (
-        <View style={[styles.avatar, { backgroundColor: senderAvatarColor || COLORS.accentGreen }]}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
+        <Avatar name={displayName} color={senderAvatarColor} />
       )}
 
-      <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
-        {/* Sender name — only shown for others */}
+      <View style={styles.bubbleWrap}>
+        {/* Sender name */}
         {!isMine && (
-          <Text style={[styles.senderName, { color: senderAvatarColor || COLORS.accentGreenLight }]}>
+          <Text style={[styles.senderName, { color: senderAvatarColor || COLORS.accentCyan }]}>
             {displayName}
           </Text>
         )}
 
-        <Text style={styles.text}>{text}</Text>
-
-        {/* Timestamp + read ticks */}
-        <View style={styles.meta}>
-          <Text style={styles.timestamp}>{formatTime(createdAt)}</Text>
-          {isMine && <StatusTicks status={status} />}
-        </View>
+        {/* Bubble */}
+        {isMine ? (
+          <LinearGradient
+            colors={['#0D3B5E', '#082C48']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.bubble, styles.bubbleMine]}
+          >
+            <Text style={styles.text}>{text}</Text>
+            <View style={styles.meta}>
+              <Text style={styles.timestamp}>{formatTime(createdAt)}</Text>
+              <StatusTick status={status} />
+            </View>
+          </LinearGradient>
+        ) : (
+          <View style={[styles.bubble, styles.bubbleOther]}>
+            <Text style={styles.text}>{text}</Text>
+            <View style={styles.meta}>
+              <Text style={styles.timestamp}>{formatTime(createdAt)}</Text>
+            </View>
+          </View>
+        )}
       </View>
-    </View>
+
+      {/* Spacer for mine alignment */}
+      {isMine && <View style={styles.avatarSpacer} />}
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    marginVertical: 2,
-    paddingHorizontal: 10,
-    alignItems: 'flex-end'
+    marginVertical: 3,
+    paddingHorizontal: 12,
+    alignItems: 'flex-end',
   },
-  rowMine: {
-    justifyContent: 'flex-end'
-  },
-  rowOther: {
-    justifyContent: 'flex-start'
-  },
+  rowMine: { justifyContent: 'flex-end' },
+  rowOther: { justifyContent: 'flex-start' },
+
   avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
-    flexShrink: 0
+    marginRight: 8,
+    flexShrink: 0,
   },
   avatarText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.white
+    fontWeight: FONTS.bold,
+    color: COLORS.white,
   },
+  avatarSpacer: { width: 40 },
+
+  bubbleWrap: { maxWidth: '75%' },
+  senderName: {
+    fontSize: 11,
+    fontWeight: FONTS.bold,
+    marginBottom: 4,
+    paddingLeft: 4,
+    letterSpacing: 0.4,
+  },
+
   bubble: {
-    maxWidth: '78%',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 6,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 2,
-    elevation: 2
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 7,
+    borderRadius: RADIUS.lg,
   },
   bubbleMine: {
-    backgroundColor: COLORS.bubbleMine,
-    borderBottomRightRadius: 3
+    borderBottomRightRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,212,255,0.12)',
+    shadowColor: '#00D4FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   bubbleOther: {
-    backgroundColor: COLORS.bubbleOther,
-    borderBottomLeftRadius: 3
+    backgroundColor: COLORS.bgFloat,
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.borderGlass,
   },
-  senderName: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 3
-  },
+
   text: {
     fontSize: 15,
     color: COLORS.textPrimary,
-    lineHeight: 21
+    lineHeight: 22,
+    fontWeight: FONTS.regular,
   },
+
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: 4,
-    gap: 4
+    marginTop: 5,
+    gap: 5,
   },
   timestamp: {
+    fontSize: 10,
+    color: COLORS.textMuted,
+    fontWeight: FONTS.medium,
+  },
+  tick: {
     fontSize: 11,
-    color: COLORS.textTimestamp
+    color: COLORS.textMuted,
+    fontWeight: FONTS.bold,
   },
-  ticks: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '700'
-  },
-  ticksRead: {
-    color: COLORS.accentBlue
-  }
+  tickDelivered: { color: COLORS.textSecondary },
+  tickRead: { color: COLORS.accentCyan },
 });
 
 export default memo(MessageBubble);

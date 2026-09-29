@@ -3,7 +3,7 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  useMemo
+  useMemo,
 } from 'react';
 import {
   View,
@@ -15,9 +15,11 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
-  Alert
+  Alert,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAuth } from '../context/AuthContext';
 import useSocket from '../socket/useSocket';
@@ -25,35 +27,119 @@ import { getMessages, sendMessage } from '../api/messageApi';
 import { connectSocket } from '../socket/socket';
 
 import MessageBubble from '../components/MessageBubble';
-import MessageInput from '../components/MessageInput';
+import MessageInput  from '../components/MessageInput';
 import TypingIndicator from '../components/TypingIndicator';
-import OnlineUsersBar from '../components/OnlineUsersBar';
+import OnlineUsersBar  from '../components/OnlineUsersBar';
 import ConnectionBanner from '../components/ConnectionBanner';
 
-import { COLORS, DEFAULT_ROOM, HISTORY_LIMIT } from '../utils/constants';
+import { COLORS, GRADIENTS, DEFAULT_ROOM, HISTORY_LIMIT, FONTS, RADIUS, SHADOW } from '../utils/constants';
 import { formatDateLabel, isDifferentDay } from '../utils/formatTime';
 
+// ── Date Separator ────────────────────────────────────────────────────────────
+const DateSep = ({ label }) => (
+  <View style={sepStyles.wrap}>
+    <View style={sepStyles.line} />
+    <View style={sepStyles.pill}>
+      <Text style={sepStyles.text}>{label}</Text>
+    </View>
+    <View style={sepStyles.line} />
+  </View>
+);
+
+const sepStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 14,
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.borderGlass,
+  },
+  pill: {
+    backgroundColor: COLORS.bgFloat,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: COLORS.borderGlass,
+  },
+  text: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: FONTS.semibold,
+    letterSpacing: 0.8,
+  },
+});
+
+// ── Connection Status Dot ─────────────────────────────────────────────────────
+const StatusDot = ({ status }) => {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (status === 'connected') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1.6, duration: 1000, useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 1,   duration: 1000, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulse.setValue(1);
+    }
+  }, [status]);
+
+  const color =
+    status === 'connected'   ? COLORS.accentGreen  :
+    status === 'connecting'  ? COLORS.accentAmber  :
+                               COLORS.accentRed;
+
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 14, height: 14 }}>
+      {status === 'connected' && (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            width: 14,
+            height: 14,
+            borderRadius: 7,
+            backgroundColor: color,
+            opacity: 0.35,
+            transform: [{ scale: pulse }],
+          }}
+        />
+      )}
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+    </View>
+  );
+};
+
+// ── Main ChatScreen ───────────────────────────────────────────────────────────
 export default function ChatScreen() {
   const { user, logout } = useAuth();
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  const [messages, setMessages] = useState([]);       // chronological array
-  const [typingUsers, setTypingUsers] = useState([]); // [{username, userId}]
-  const [onlineUsers, setOnlineUsers] = useState([]); // [{userId, username, ...}]
-  const [connStatus, setConnStatus] = useState('connecting'); // 'connected'|'connecting'|'disconnected'
+  const [messages,       setMessages]       = useState([]);
+  const [typingUsers,    setTypingUsers]    = useState([]);
+  const [onlineUsers,    setOnlineUsers]    = useState([]);
+  const [connStatus,     setConnStatus]     = useState('connecting');
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [sendError, setSendError] = useState(null);
 
-  // Track message IDs for deduplication
-  const msgIdSet = useRef(new Set());
+  const msgIdSet   = useRef(new Set());
   const flatListRef = useRef(null);
+  const headerAnim  = useRef(new Animated.Value(0)).current;
 
-  // ── Load chat history via REST on mount ───────────────────────────────────
+  // Entry animation
+  useEffect(() => {
+    Animated.spring(headerAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }).start();
+  }, []);
+
+  // Load history
   useEffect(() => {
     const loadHistory = async () => {
       try {
         const history = await getMessages({ room: DEFAULT_ROOM, limit: HISTORY_LIMIT });
-        // Deduplicate on initial load
         const fresh = history.filter((m) => {
           if (msgIdSet.current.has(m._id)) return false;
           msgIdSet.current.add(m._id);
@@ -69,102 +155,79 @@ export default function ChatScreen() {
     loadHistory();
   }, []);
 
-  // ── Auto-scroll to latest message ─────────────────────────────────────────
   const scrollToEnd = useCallback((animated = true) => {
-    // Small delay lets FlatList finish rendering new items
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated }), 100);
   }, []);
 
   useEffect(() => {
-    if (!historyLoading && messages.length > 0) {
-      scrollToEnd(false);
-    }
+    if (!historyLoading && messages.length > 0) scrollToEnd(false);
   }, [historyLoading]);
 
-  // ── Socket event handlers ─────────────────────────────────────────────────
+  // Socket handlers
   const handleNewMessage = useCallback(
     (msg) => {
       if (!msg?._id) return;
-      if (msgIdSet.current.has(msg._id)) return; // deduplicate
+      if (msgIdSet.current.has(msg._id)) return;
       msgIdSet.current.add(msg._id);
       setMessages((prev) => [...prev, msg]);
       scrollToEnd();
-
-      // Clear the sender from typing list
-      setTypingUsers((prev) =>
-        prev.filter((u) => u.username !== msg.senderUsername)
-      );
+      setTypingUsers((prev) => prev.filter((u) => u.username !== msg.senderUsername));
     },
     [scrollToEnd]
   );
 
-  const handleTypingStart = useCallback(({ username, userId }) => {
-    if (username === user?.username) return; // ignore own events
+  const handleTypingStart  = useCallback(({ username, userId }) => {
+    if (username === user?.username) return;
     setTypingUsers((prev) => {
       if (prev.find((u) => u.username === username)) return prev;
       return [...prev, { username, userId }];
     });
   }, [user]);
 
-  const handleTypingStop = useCallback(({ username }) => {
+  const handleTypingStop   = useCallback(({ username }) => {
     setTypingUsers((prev) => prev.filter((u) => u.username !== username));
   }, []);
 
-  const handleUsersOnline = useCallback((list) => {
+  const handleUsersOnline  = useCallback((list) => {
     setOnlineUsers(Array.isArray(list) ? list : []);
   }, []);
 
-  const handleConnect = useCallback(() => {
-    setConnStatus('connected');
-  }, []);
+  const handleConnect     = useCallback(() => setConnStatus('connected'),    []);
+  const handleDisconnect  = useCallback(() => setConnStatus('disconnected'), []);
 
-  const handleDisconnect = useCallback(() => {
-    setConnStatus('disconnected');
-  }, []);
-
-  // Update local message status when delivered/read events arrive
   const handleMsgDelivered = useCallback(({ messageId, status }) => {
     setMessages((prev) =>
-      prev.map((m) =>
-        m._id === messageId && m.status === 'sent' ? { ...m, status } : m
-      )
+      prev.map((m) => m._id === messageId && m.status === 'sent' ? { ...m, status } : m)
     );
   }, []);
 
   const handleMsgRead = useCallback(({ messageId }) => {
     setMessages((prev) =>
-      prev.map((m) =>
-        m._id === messageId && m.status !== 'read' ? { ...m, status: 'read' } : m
-      )
+      prev.map((m) => m._id === messageId && m.status !== 'read' ? { ...m, status: 'read' } : m)
     );
   }, []);
 
-  // ── Socket hook ───────────────────────────────────────────────────────────
   const { emitTypingStart, emitTypingStop } = useSocket({
     user,
-    onMessage: handleNewMessage,
-    onTypingStart: handleTypingStart,
-    onTypingStop: handleTypingStop,
-    onUsersOnline: handleUsersOnline,
-    onConnect: handleConnect,
-    onDisconnect: handleDisconnect,
+    onMessage:      handleNewMessage,
+    onTypingStart:  handleTypingStart,
+    onTypingStop:   handleTypingStop,
+    onUsersOnline:  handleUsersOnline,
+    onConnect:      handleConnect,
+    onDisconnect:   handleDisconnect,
     onMsgDelivered: handleMsgDelivered,
-    onMsgRead: handleMsgRead
+    onMsgRead:      handleMsgRead,
   });
 
-  // ── Retry handler for ConnectionBanner ────────────────────────────────────
   const handleRetry = useCallback(() => {
     setConnStatus('connecting');
     connectSocket();
   }, []);
 
-  // ── Send message via REST → server broadcasts via socket ──────────────────
+  // Send
   const handleSend = useCallback(
     async (text) => {
       if (!user) return;
-      setSendError(null);
-
-      // Optimistic UI: add a temporary message immediately
       const tempId = `temp_${Date.now()}`;
       const optimistic = {
         _id: tempId,
@@ -175,12 +238,11 @@ export default function ChatScreen() {
         text,
         room: DEFAULT_ROOM,
         status: 'sent',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
       msgIdSet.current.add(tempId);
       setMessages((prev) => [...prev, optimistic]);
       scrollToEnd();
-
       try {
         const saved = await sendMessage({
           senderId: user._id,
@@ -188,49 +250,31 @@ export default function ChatScreen() {
           senderDisplayName: user.displayName,
           senderAvatarColor: user.avatarColor,
           text,
-          room: DEFAULT_ROOM
+          room: DEFAULT_ROOM,
         });
-
-        // Replace optimistic message with the saved document
         msgIdSet.current.delete(tempId);
         msgIdSet.current.add(saved._id);
-        setMessages((prev) =>
-          prev.map((m) => (m._id === tempId ? saved : m))
-        );
+        setMessages((prev) => prev.map((m) => (m._id === tempId ? saved : m)));
       } catch (err) {
-        // Mark optimistic message as failed
         setMessages((prev) => prev.filter((m) => m._id !== tempId));
         msgIdSet.current.delete(tempId);
-        setSendError('Failed to send. Tap to retry.');
         Alert.alert(
-          'Message Failed',
-          err.message || 'Could not send message. Check your connection.',
-          [
-            { text: 'OK', style: 'cancel' },
-            { text: 'Retry', onPress: () => handleSend(text) }
-          ]
+          'Failed to Send',
+          err.message || 'Check your connection and try again.',
+          [{ text: 'OK' }, { text: 'Retry', onPress: () => handleSend(text) }]
         );
       }
     },
     [user, scrollToEnd]
   );
 
-  // ── Render helpers ────────────────────────────────────────────────────────
-
-  /**
-   * Build a flat list-ready array that inserts date separator objects
-   * between messages from different calendar days.
-   */
+  // List data with date separators
   const listData = useMemo(() => {
     const result = [];
     messages.forEach((msg, i) => {
       const prev = messages[i - 1];
       if (!prev || isDifferentDay(prev.createdAt, msg.createdAt)) {
-        result.push({
-          type: 'DATE_SEPARATOR',
-          id: `sep_${msg.createdAt}`,
-          label: formatDateLabel(msg.createdAt)
-        });
+        result.push({ type: 'DATE_SEPARATOR', id: `sep_${msg.createdAt}`, label: formatDateLabel(msg.createdAt) });
       }
       result.push({ type: 'MESSAGE', id: msg._id, data: msg });
     });
@@ -239,71 +283,91 @@ export default function ChatScreen() {
 
   const renderItem = useCallback(
     ({ item }) => {
-      if (item.type === 'DATE_SEPARATOR') {
-        return (
-          <View style={styles.dateSep}>
-            <Text style={styles.dateSepText}>{item.label}</Text>
-          </View>
-        );
-      }
-      const msg = item.data;
-      const isMine =
-        msg.senderId === user?._id || msg.senderUsername === user?.username;
-      return <MessageBubble message={msg} isMine={isMine} />;
+      if (item.type === 'DATE_SEPARATOR') return <DateSep label={item.label} />;
+      const isMine = item.data.senderId === user?._id || item.data.senderUsername === user?.username;
+      return <MessageBubble message={item.data} isMine={isMine} />;
     },
     [user]
   );
 
   const keyExtractor = useCallback((item) => item.id, []);
 
-  // ── Header ────────────────────────────────────────────────────────────────
+  // Header
   const onlineCount = onlineUsers.length;
-  const headerSubtitle =
-    connStatus === 'connected'
-      ? `${onlineCount} online`
-      : connStatus === 'connecting'
-      ? 'connecting...'
-      : 'offline';
+  const statusLabel =
+    connStatus === 'connected'  ? `${onlineCount} member${onlineCount !== 1 ? 's' : ''} online` :
+    connStatus === 'connecting' ? 'Connecting…' :
+                                  'Offline';
+
+  const userInitial = (user?.displayName || user?.username || '?').charAt(0).toUpperCase();
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bgHeader} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.bgSurface} />
 
-      {/* ── Top Header ────────────────────────────────────────────────────── */}
-      <View style={styles.header}>
+      {/* ── Header ───────────────────────────────────────────────────────────── */}
+      <LinearGradient
+        colors={['#0D1117', '#161B27']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.header}
+      >
+        {/* Room info */}
         <View style={styles.headerLeft}>
-          <View style={[styles.roomAvatar, { backgroundColor: COLORS.accentGreen }]}>
-            <Text style={styles.roomAvatarText}>#</Text>
-          </View>
+          <LinearGradient
+            colors={[COLORS.accentCyan, COLORS.accentViolet]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.roomAvatarRing}
+          >
+            <View style={styles.roomAvatarInner}>
+              <Text style={styles.roomAvatarText}>#</Text>
+            </View>
+          </LinearGradient>
+
           <View>
-            <Text style={styles.headerTitle}>Chatzy Global</Text>
-            <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
+            <Text style={styles.roomName}>Chatzy Global</Text>
+            <View style={styles.statusRow}>
+              <StatusDot status={connStatus} />
+              <Text style={styles.statusLabel}>{statusLabel}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Logout button */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={logout} activeOpacity={0.7}>
-          <Text style={styles.logoutText}>Exit</Text>
-        </TouchableOpacity>
-      </View>
+        {/* User avatar + logout */}
+        <View style={styles.headerRight}>
+          <View style={[styles.myAvatar, { backgroundColor: user?.avatarColor || COLORS.accentCyan }]}>
+            <Text style={styles.myAvatarText}>{userInitial}</Text>
+          </View>
+          <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.7}>
+            <Text style={styles.logoutText}>Exit</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
-      {/* ── Connection Banner ────────────────────────────────────────────── */}
+      {/* Bottom accent line */}
+      <LinearGradient
+        colors={['transparent', COLORS.accentCyan, 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.headerBottomLine}
+      />
+
+      {/* ── Connection Banner ─────────────────────────────────────────────── */}
       <ConnectionBanner status={connStatus} onRetry={handleRetry} />
 
-      {/* ── Online Users Bar ─────────────────────────────────────────────── */}
+      {/* ── Online Users ──────────────────────────────────────────────────── */}
       <OnlineUsersBar users={onlineUsers} />
 
-      {/* ── Chat Body ────────────────────────────────────────────────────── */}
+      {/* ── Chat Body ─────────────────────────────────────────────────────── */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {/* Messages list */}
         {historyLoading ? (
-          <View style={styles.loadingArea}>
-            <ActivityIndicator size="large" color={COLORS.accentGreen} />
-            <Text style={styles.loadingText}>Loading messages...</Text>
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={COLORS.accentCyan} />
+            <Text style={styles.loadingText}>Loading messages…</Text>
           </View>
         ) : (
           <FlatList
@@ -313,26 +377,28 @@ export default function ChatScreen() {
             renderItem={renderItem}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            // Performance tuning
             windowSize={10}
             maxToRenderPerBatch={20}
             initialNumToRender={30}
             onContentSizeChange={() => scrollToEnd(false)}
+            style={styles.list}
             ListEmptyComponent={
-              <View style={styles.emptyArea}>
-                <Text style={styles.emptyIcon}>💬</Text>
-                <Text style={styles.emptyText}>
-                  No messages yet.{'\n'}Be the first to say hello!
-                </Text>
+              <View style={styles.emptyWrap}>
+                <LinearGradient
+                  colors={[COLORS.accentCyan, COLORS.accentViolet]}
+                  style={styles.emptyIconWrap}
+                >
+                  <Text style={styles.emptyIcon}>💬</Text>
+                </LinearGradient>
+                <Text style={styles.emptyTitle}>No messages yet</Text>
+                <Text style={styles.emptySubtitle}>Be the first to say hello!</Text>
               </View>
             }
           />
         )}
 
-        {/* Typing indicator */}
         <TypingIndicator typingUsers={typingUsers} />
 
-        {/* Message Input */}
         <MessageInput
           onSend={handleSend}
           onTypingStart={emitTypingStart}
@@ -347,107 +413,142 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bgHeader
+    backgroundColor: COLORS.bgSurface,
   },
   flex: {
     flex: 1,
-    backgroundColor: COLORS.bgChat
+    backgroundColor: COLORS.bgBase,
   },
+
   // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: COLORS.bgHeader,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    gap: 12,
   },
-  roomAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  roomAvatarRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    padding: 2.5,
+    ...SHADOW.cyanGlow,
+  },
+  roomAvatarInner: {
+    flex: 1,
+    backgroundColor: COLORS.bgFloat,
+    borderRadius: 19,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   roomAvatarText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: COLORS.white
+    fontSize: 18,
+    fontWeight: FONTS.black,
+    color: COLORS.accentCyan,
   },
-  headerTitle: {
+  roomName: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary
+    fontWeight: FONTS.bold,
+    color: COLORS.textPrimary,
+    letterSpacing: 0.3,
   },
-  headerSubtitle: {
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  statusLabel: {
     fontSize: 12,
-    color: COLORS.accentGreenLight,
-    marginTop: 1
+    color: COLORS.textSecondary,
+    fontWeight: FONTS.medium,
+  },
+
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  myAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.borderGlass,
+  },
+  myAvatarText: {
+    fontSize: 14,
+    fontWeight: FONTS.bold,
+    color: COLORS.white,
   },
   logoutBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: COLORS.bgInputField,
-    borderRadius: 10,
+    backgroundColor: COLORS.white06,
+    borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: COLORS.border
+    borderColor: COLORS.borderGlass,
   },
   logoutText: {
     color: COLORS.textSecondary,
-    fontSize: 13,
-    fontWeight: '600'
+    fontSize: 12,
+    fontWeight: FONTS.semibold,
   },
-  // ── Messages list ──
-  listContent: {
-    paddingTop: 12,
-    paddingBottom: 8
+  headerBottomLine: {
+    height: 1,
+    opacity: 0.25,
   },
-  loadingArea: {
+
+  // ── List ──
+  list: { flex: 1, backgroundColor: COLORS.bgBase },
+  listContent: { paddingTop: 16, paddingBottom: 8 },
+
+  // ── Loading ──
+  loadingWrap: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12
+    gap: 14,
+    backgroundColor: COLORS.bgBase,
   },
   loadingText: {
     color: COLORS.textSecondary,
-    fontSize: 14
+    fontSize: 14,
+    fontWeight: FONTS.medium,
   },
-  emptyArea: {
+
+  // ── Empty ──
+  emptyWrap: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 80,
-    gap: 10
+    paddingTop: 100,
+    gap: 14,
   },
-  emptyIcon: {
-    fontSize: 48
-  },
-  emptyText: {
-    color: COLORS.textSecondary,
-    fontSize: 15,
-    textAlign: 'center',
-    lineHeight: 22
-  },
-  // ── Date separator ──
-  dateSep: {
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 10
   },
-  dateSepText: {
-    backgroundColor: COLORS.bgInputField,
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-    overflow: 'hidden',
-    fontWeight: '600'
-  }
+  emptyIcon: { fontSize: 32 },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: FONTS.bold,
+    color: COLORS.textPrimary,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontWeight: FONTS.regular,
+  },
 });

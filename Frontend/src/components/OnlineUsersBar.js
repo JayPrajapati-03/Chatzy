@@ -1,44 +1,36 @@
 import React, { memo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet
-} from 'react-native';
-import { COLORS } from '../utils/constants';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { COLORS, FONTS, RADIUS } from '../utils/constants';
 
 /**
- * OnlineUsersBar — horizontal scrollable strip showing who's online.
- * Each user is shown as a colored avatar chip with a green pulse dot.
- *
- * @param {{ users: Array<{userId, username, displayName, avatarColor}> }} props
+ * Premium horizontal scrolling online users bar.
  */
 const OnlineUsersBar = ({ users }) => {
   if (!users || users.length === 0) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Online</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {users.map((u) => (
-          <View key={u.userId} style={styles.chip}>
-            <View style={styles.chipLeft}>
-              <View style={[styles.avatar, { backgroundColor: u.avatarColor || COLORS.accentGreen }]}>
-                <Text style={styles.avatarText}>
-                  {(u.displayName || u.username || '?').charAt(0).toUpperCase()}
-                </Text>
+        <View style={styles.pill}>
+          <View style={styles.liveDot} />
+          <Text style={styles.countText}>{users.length} online</Text>
+        </View>
+
+        {users.map((u, i) => {
+          const initial = (u.displayName || u.username || '?').charAt(0).toUpperCase();
+          return (
+            <View key={u.userId || i} style={styles.userChip}>
+              <View style={[styles.chipAvatar, { backgroundColor: u.avatarColor || COLORS.accentCyan }]}>
+                <Text style={styles.chipInitial}>{initial}</Text>
               </View>
-              <View style={styles.onlineDot} />
+              <Text style={styles.chipName} numberOfLines={1}>{u.displayName || u.username}</Text>
             </View>
-            <Text style={styles.chipName} numberOfLines={1}>
-              {u.displayName || u.username}
-            </Text>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -46,73 +38,70 @@ const OnlineUsersBar = ({ users }) => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.bgHeader,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: COLORS.bgElevated,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    marginRight: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6
+    borderBottomColor: COLORS.border,
   },
   scroll: {
-    flexDirection: 'row',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignItems: 'center',
     gap: 8,
-    alignItems: 'center'
   },
-  chip: {
+  pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.bgInputField,
-    borderRadius: 20,
-    paddingRight: 10,
-    paddingLeft: 4,
+    backgroundColor: 'rgba(16,185,129,0.12)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    gap: 6,
     borderWidth: 1,
-    borderColor: COLORS.border
+    borderColor: 'rgba(16,185,129,0.25)',
+    gap: 5,
+    marginRight: 4,
   },
-  chipLeft: {
-    position: 'relative',
-    width: 28,
-    height: 28
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.accentGreen,
   },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  countText: {
+    fontSize: 11,
+    color: COLORS.accentGreen,
+    fontWeight: FONTS.bold,
+    letterSpacing: 0.5,
+  },
+  userChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.bgFloat,
+    borderRadius: RADIUS.full,
+    paddingRight: 10,
+    paddingLeft: 3,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: COLORS.borderGlass,
+    gap: 6,
+  },
+  chipAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.white
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: COLORS.online,
-    borderWidth: 1.5,
-    borderColor: COLORS.bgHeader
+  chipInitial: {
+    fontSize: 10,
+    fontWeight: FONTS.bold,
+    color: COLORS.white,
   },
   chipName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    maxWidth: 80
-  }
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: FONTS.medium,
+    maxWidth: 70,
+  },
 });
 
 export default memo(OnlineUsersBar);

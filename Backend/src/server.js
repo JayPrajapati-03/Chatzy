@@ -17,12 +17,38 @@ const startServer = async () => {
   // Connect to MongoDB
   await connectDB();
 
+  // Auto-detect and write IP to Frontend/.env to fix mobile connection completely automatically
+  const os = require('os');
+  const fs = require('fs');
+  const path = require('path');
+  const networkInterfaces = os.networkInterfaces();
+  let localIP = '127.0.0.1';
+  for (const interfaceName in networkInterfaces) {
+    const interfaces = networkInterfaces[interfaceName];
+    for (const iface of interfaces) {
+      if (iface.family === 'IPv4' && !iface.internal && !interfaceName.toLowerCase().includes('vmware') && !interfaceName.toLowerCase().includes('virtual')) {
+        localIP = iface.address;
+      }
+    }
+  }
+
+  // Auto-update the Frontend .env file
+  try {
+    const envPath = path.join(__dirname, '../../Frontend/.env');
+    let envContent = fs.readFileSync(envPath, 'utf8');
+    envContent = envContent.replace(/EXPO_PUBLIC_API_URL=.*/g, `EXPO_PUBLIC_API_URL=http://${localIP}:${env.PORT}`);
+    fs.writeFileSync(envPath, envContent);
+    logger.info(`✅ Automatically updated Frontend/.env with IP: ${localIP}`);
+  } catch (err) {
+    logger.error('Could not auto-update Frontend/.env, please check paths.', err);
+  }
+
   server.listen(env.PORT, () => {
     logger.info(`=========================================`);
     logger.info(` Chatzy Backend Server Running on Port: ${env.PORT}`);
     logger.info(` Environment: ${env.NODE_ENV}`);
-    logger.info(` Health check: http://localhost:${env.PORT}/health`);
-    logger.info(` Test Client: http://localhost:${env.PORT}/test/test-client.html`);
+    logger.info(` Local: http://localhost:${env.PORT}`);
+    logger.info(` On Your Network: http://${localIP}:${env.PORT}`);
     logger.info(`=========================================`);
   });
 };
