@@ -109,6 +109,11 @@ const registerChatHandlers = (io, socket) => {
 
       const message = await Message.findById(messageId);
       if (message && message.status === 'sent') {
+        // Sender cannot deliver their own message
+        if (userId && message.senderId && message.senderId.toString() === userId.toString()) {
+          return;
+        }
+
         message.status = 'delivered';
         await message.save();
 
@@ -133,7 +138,14 @@ const registerChatHandlers = (io, socket) => {
 
       const message = await Message.findById(messageId);
       if (message) {
-        const alreadyRead = message.readBy.some((entry) => entry.userId.toString() === userId.toString());
+        // Sender cannot mark their own message as read
+        if (message.senderId && message.senderId.toString() === userId.toString()) {
+          return;
+        }
+
+        const alreadyRead = message.readBy?.some(
+          (entry) => entry.userId && entry.userId.toString() === userId.toString()
+        );
         if (!alreadyRead) {
           message.readBy.push({
             userId,

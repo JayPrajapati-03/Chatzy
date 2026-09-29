@@ -187,11 +187,13 @@ const styles = StyleSheet.create({
   },
   tick: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: '#8696A0',
     fontWeight: FONTS.bold,
+    letterSpacing: -1.5,
+    marginLeft: 3,
   },
-  tickDelivered: { color: COLORS.textSecondary },
-  tickRead: { color: COLORS.accentCyan },
+  tickDelivered: { color: '#8696A0' },
+  tickRead: { color: '#53BDEB' },
 });
 
 export default memo(MessageBubble);

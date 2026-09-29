@@ -115,6 +115,17 @@ const useSocket = ({
     });
   }, [user]);
 
+  // Called by receiver when they receive a new message from someone else
+  const emitMsgDelivered = useCallback((messageId) => {
+    if (!user || !messageId) return;
+    getSocket().emit('message:delivered', {
+      messageId,
+      userId: user._id,
+      username: user.username,
+      room: DEFAULT_ROOM,
+    });
+  }, [user]);
+
   const emitJoin = useCallback(() => {
     if (!user) return;
     getSocket().emit('user:join', {
@@ -139,7 +150,7 @@ const useSocket = ({
     [user]
   );
 
-  return { emitTypingStart, emitTypingStop, emitJoin, emitMsgRead, socket: getSocket() };
+  return { emitTypingStart, emitTypingStop, emitJoin, emitMsgRead, emitMsgDelivered, socket: getSocket() };
 };
 
 export default useSocket;

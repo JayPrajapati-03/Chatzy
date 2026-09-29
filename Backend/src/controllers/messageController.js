@@ -31,6 +31,7 @@ const sendMessage = asyncHandler(async (req, res) => {
     logger.warn('Socket.io instance not attached to express app');
   }
 
+
   // 3. Return created message
   res.status(201).json({
     success: true,

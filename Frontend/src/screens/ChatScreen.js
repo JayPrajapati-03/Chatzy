@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -164,20 +165,59 @@ export default function ChatScreen() {
     if (!historyLoading && messages.length > 0) scrollToEnd(false);
   }, [historyLoading]);
 
+  // Track whether app is in foreground (active) for read receipts
+  const appStateRef = useRef(AppState.currentState);
+  const emittersRef = useRef({});
+  const readMsgIdsRef = useRef(new Set());
+  const deliveredMsgIdsRef = useRef(new Set());
+  const markedReadSet = useRef(new Set());
+
   // Socket handlers
   const handleNewMessage = useCallback(
     (msg) => {
       if (!msg?._id) return;
       if (msgIdSet.current.has(msg._id)) return;
       msgIdSet.current.add(msg._id);
-      setMessages((prev) => [...prev, msg]);
+
+      const isFromMe = msg.senderId === user?._id || msg.senderUsername === user?.username;
+
+      setMessages((prev) => {
+        // Prevent duplicate if already in state
+        if (prev.some((m) => String(m._id) === String(msg._id))) return prev;
+
+        // If from me, check if optimistic temp message is present and replace it
+        if (isFromMe) {
+          const tempIndex = prev.findIndex(
+            (m) => m._id && String(m._id).startsWith('temp_') && m.text === msg.text
+          );
+          if (tempIndex !== -1) {
+            const next = [...prev];
+            next[tempIndex] = msg;
+            return next;
+          }
+        }
+        return [...prev, msg];
+      });
+
       scrollToEnd();
       setTypingUsers((prev) => prev.filter((u) => u.username !== msg.senderUsername));
+
+      // WhatsApp logic: if I am the RECEIVER (not the sender)
+      if (!isFromMe) {
+        // ✓✓ grey — message arrived on my device
+        emittersRef.current.emitMsgDelivered?.(msg._id);
+
+        // ✓✓ cyan/blue — I am actively viewing the chat right now
+        if (appStateRef.current === 'active') {
+          markedReadSet.current.add(String(msg._id));
+          emittersRef.current.emitMsgRead?.(msg._id);
+        }
+      }
     },
-    [scrollToEnd]
+    [scrollToEnd, user]
   );
 
-  const handleTypingStart  = useCallback(({ username, userId }) => {
+  const handleTypingStart = useCallback(({ username, userId }) => {
     if (username === user?.username) return;
     setTypingUsers((prev) => {
       if (prev.find((u) => u.username === username)) return prev;
@@ -185,30 +225,40 @@ export default function ChatScreen() {
     });
   }, [user]);
 
-  const handleTypingStop   = useCallback(({ username }) => {
+  const handleTypingStop = useCallback(({ username }) => {
     setTypingUsers((prev) => prev.filter((u) => u.username !== username));
   }, []);
 
-  const handleUsersOnline  = useCallback((list) => {
+  const handleUsersOnline = useCallback((list) => {
     setOnlineUsers(Array.isArray(list) ? list : []);
   }, []);
 
-  const handleConnect     = useCallback(() => setConnStatus('connected'),    []);
-  const handleDisconnect  = useCallback(() => setConnStatus('disconnected'), []);
+  const handleConnect = useCallback(() => setConnStatus('connected'), []);
+  const handleDisconnect = useCallback(() => setConnStatus('disconnected'), []);
 
   const handleMsgDelivered = useCallback(({ messageId, status }) => {
+    deliveredMsgIdsRef.current.add(String(messageId));
     setMessages((prev) =>
-      prev.map((m) => m._id === messageId && m.status === 'sent' ? { ...m, status } : m)
+      prev.map((m) =>
+        String(m._id) === String(messageId) && m.status !== 'read'
+          ? { ...m, status: status || 'delivered' }
+          : m
+      )
     );
   }, []);
 
   const handleMsgRead = useCallback(({ messageId }) => {
+    readMsgIdsRef.current.add(String(messageId));
     setMessages((prev) =>
-      prev.map((m) => m._id === messageId && m.status !== 'read' ? { ...m, status: 'read' } : m)
+      prev.map((m) =>
+        String(m._id) === String(messageId)
+          ? { ...m, status: 'read' }
+          : m
+      )
     );
   }, []);
 
-  const { emitTypingStart, emitTypingStop } = useSocket({
+  const { emitTypingStart, emitTypingStop, emitMsgDelivered, emitMsgRead } = useSocket({
     user,
     onMessage:      handleNewMessage,
     onTypingStart:  handleTypingStart,
@@ -219,6 +269,37 @@ export default function ChatScreen() {
     onMsgDelivered: handleMsgDelivered,
     onMsgRead:      handleMsgRead,
   });
+
+  // Keep emitters accessible inside callbacks via ref
+  useEffect(() => {
+    emittersRef.current = { emitMsgDelivered, emitMsgRead };
+  }, [emitMsgDelivered, emitMsgRead]);
+
+  // Mark all unread messages from others as read when screen is active or comes to foreground
+  useEffect(() => {
+    const markUnreadAsRead = () => {
+      if (!user || appStateRef.current !== 'active' || historyLoading) return;
+      messages.forEach((m) => {
+        const isFromMe = m.senderId === user._id || m.senderUsername === user.username;
+        const isTemp = typeof m._id === 'string' && m._id.startsWith('temp_');
+        if (!isFromMe && !isTemp && m.status !== 'read' && !markedReadSet.current.has(String(m._id))) {
+          markedReadSet.current.add(String(m._id));
+          emittersRef.current.emitMsgRead?.(m._id);
+        }
+      });
+    };
+
+    markUnreadAsRead();
+
+    const sub = AppState.addEventListener('change', (next) => {
+      appStateRef.current = next;
+      if (next === 'active') {
+        markUnreadAsRead();
+      }
+    });
+
+    return () => sub.remove();
+  }, [messages, user, historyLoading]);
 
   const handleRetry = useCallback(() => {
     setConnStatus('connecting');
@@ -255,7 +336,28 @@ export default function ChatScreen() {
         });
         msgIdSet.current.delete(tempId);
         msgIdSet.current.add(saved._id);
-        setMessages((prev) => prev.map((m) => (m._id === tempId ? saved : m)));
+
+        const currentStatus = readMsgIdsRef.current.has(String(saved._id))
+          ? 'read'
+          : deliveredMsgIdsRef.current.has(String(saved._id))
+          ? 'delivered'
+          : saved.status;
+
+        setMessages((prev) => {
+          const hasSaved = prev.some((m) => String(m._id) === String(saved._id));
+          if (hasSaved) {
+            return prev
+              .filter((m) => m._id !== tempId)
+              .map((m) =>
+                String(m._id) === String(saved._id)
+                  ? { ...m, status: m.status === 'read' ? 'read' : currentStatus }
+                  : m
+              );
+          }
+          return prev.map((m) =>
+            m._id === tempId ? { ...saved, status: currentStatus } : m
+          );
+        });
       } catch (err) {
         setMessages((prev) => prev.filter((m) => m._id !== tempId));
         msgIdSet.current.delete(tempId);
