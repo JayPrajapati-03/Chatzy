@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatzy Real-Time Test Client</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    :root {
+      --primary: #075E54;
+      --primary-dark: #054C44;
+      --accent: #25D366;
+      --bg: #ECE5DD;
+      --my-bubble: #DCF8C6;
+      --other-bubble: #FFFFFF;
+      --text: #111B21;
+      --subtext: #667781;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #121b22; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 12px; }
+    .chat-container { width: 100%; max-width: 520px; height: 92vh; background: #efeae2; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4); position: relative; }
+    .header { background: var(--primary); color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+    .header-info { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: #128C7E; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: white; text-transform: uppercase; }
+    .title-box h3 { font-size: 16px; margin: 0; }
+    .title-box p { font-size: 12px; opacity: 0.85; }
+    .status-badge { font-size: 11px; padding: 4px 8px; border-radius: 12px; background: rgba(255,255,255,0.2); }
+    .online-bar { background: #f0f2f5; padding: 8px 14px; font-size: 12px; color: var(--subtext); border-bottom: 1px solid #e1e3e6; display: flex; align-items: center; gap: 6px; overflow-x: auto; white-space: nowrap; }
+    .online-chip { background: #e7f8ee; color: #0b6832; border: 1px solid #b7ebd0; border-radius: 12px; padding: 2px 8px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+    .online-dot { width: 6px; height: 6px; background: #25D366; border-radius: 50%; }
+    .messages-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .msg-row { display: flex; flex-direction: column; max-width: 78%; }
+    .msg-row.mine { align-self: flex-end; align-items: flex-end; }
+    .msg-row.others { align-self: flex-start; align-items: flex-start; }
+    .bubble { padding: 8px 12px; border-radius: 8px; font-size: 14px; color: var(--text); position: relative; word-break: break-word; box-shadow: 0 1px 1.5px rgba(11,20,26,0.13); }
+    .mine .bubble { background: var(--my-bubble); border-top-right-radius: 2px; }
+    .others .bubble { background: var(--other-bubble); border-top-left-radius: 2px; }
+    .sender-name { font-size: 11px; font-weight: bold; margin-bottom: 2px; }
+    .msg-meta { display: flex; align-items: center; justify-content: flex-end; gap: 4px; font-size: 10px; color: var(--subtext); margin-top: 4px; }
+    .ticks { font-weight: bold; font-size: 12px; color: #53bdeb; }
+    .typing-bar { height: 22px; padding: 0 16px; font-size: 12px; font-style: italic; color: var(--primary); display: flex; align-items: center; }
+    .input-box { background: #f0f2f5; padding: 10px 14px; display: flex; gap: 8px; align-items: center; }
+    .input-box input { flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid #d1d7db; outline: none; font-size: 14px; background: white; }
+    .input-box button { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+    .input-box button:disabled { opacity: 0.5; cursor: not-allowed; }
+    /* Login Modal */
+    .login-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 50; }
+    .login-card { background: white; padding: 24px; border-radius: 12px; width: 85%; max-width: 340px; text-align: center; }
+    .login-card h2 { color: var(--primary); margin-bottom: 8px; }
+    .login-card p { font-size: 13px; color: var(--subtext); margin-bottom: 16px; }
+    .login-card input { width: 100%; padding: 10px; margin-bottom: 14px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    .login-card button { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="header">
+    <div class="header-info">
+      <div class="avatar" id="roomAvatar">#</div>
+      <div class="title-box">
+        <h3>Chatzy Global Room</h3>
+        <p id="subStatus">Connecting...</p>
+      </div>
+    </div>
+    <div class="status-badge" id="connStatus">Offline</div>
+  </div>
+
+  <div class="online-bar" id="onlineBar">
+    <span>Online:</span>
+    <span id="onlineChipsList">None</span>
+  </div>
+
+  <div class="messages-area" id="messagesArea">
+    <!-- Messages injected here -->
+  </div>
+
+  <div class="typing-bar" id="typingBar"></div>
+
+  <form class="input-box" id="sendForm">
+    <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off" />
+    <button type="submit" id="sendBtn" disabled>Send</button>
+  </form>
+
+  <!-- Login Modal -->
+  <div class="login-overlay" id="loginModal">
+    <div class="login-card">
+      <h2>Join Chatzy</h2>
+      <p>Enter a username to join the real-time test room</p>
+      <input type="text" id="usernameInput" placeholder="e.g. Alice or Bob" />
+      <button type="button" id="joinBtn">Join Chat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let socket = null;
+  let currentUser = null;
+  let typingTimer = null;
+  const messagesSet = new Set();
+
+  const msgInput = document.getElementById('msgInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const messagesArea = document.getElementById('messagesArea');
+  const typingBar = document.getElementById('typingBar');
+  const connStatus = document.getElementById('connStatus');
+  const subStatus = document.getElementById('subStatus');
+  const onlineChipsList = document.getElementById('onlineChipsList');
+  const loginModal = document.getElementById('loginModal');
+  const usernameInput = document.getElementById('usernameInput');
+  const joinBtn = document.getElementById('joinBtn');
+
+  // Input enable/disable
+  msgInput.addEventListener('input', () => {
+    sendBtn.disabled = !msgInput.value.trim();
+    handleTyping();
+  });
+
+  const formatTime = (isoString) => {
+    const d = new Date(isoString || Date.now());
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Join click
+  joinBtn.addEventListener('click', async () => {
+    const username = usernameInput.value.trim();
+    if (!username) return alert('Please enter a username');
+
+    try {
+      const res = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      if (!data.success) return alert(data.message || 'Login failed');
+
+      currentUser = data.data;
+      loginModal.style.display = 'none';
+      initApp();
+    } catch (err) {
+      alert('Error logging in: ' + err.message);
+    }
+  });
+
+  const initApp = async () => {
+    subStatus.textContent = `Logged in as @${currentUser.username}`;
+    await fetchHistory();
+    connectSocket();
+  };
+
+  // Fetch REST history
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('/api/messages?room=global&limit=50');
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        json.data.forEach(renderMessage);
+        scrollToBottom();
+      }
+    } catch (err) {
+      console.error('Failed to load message history:', err);
+    }
+  };
+
+  // Render message bubble
+  const renderMessage = (msg) => {
+    if (messagesSet.has(msg._id)) return;
+    messagesSet.add(msg._id);
+
+    const isMine = currentUser && (msg.senderId === currentUser._id || msg.senderUsername === currentUser.username);
+    const row = document.createElement('div');
+    row.className = `msg-row ${isMine ? 'mine' : 'others'}`;
+    row.id = `msg-${msg._id}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    if (!isMine) {
+      const sender = document.createElement('div');
+      sender.className = 'sender-name';
+      sender.style.color = msg.senderAvatarColor || '#128C7E';
+      sender.textContent = msg.senderDisplayName || msg.senderUsername;
+      bubble.appendChild(sender);
+    }
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = msg.text;
+    bubble.appendChild(textSpan);
+
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    meta.innerHTML = `<span>${formatTime(msg.createdAt)}</span>${isMine ? ' <span class="ticks">✓✓</span>' : ''}`;
+    bubble.appendChild(meta);
+
+    row.appendChild(bubble);
+    messagesArea.appendChild(row);
+  };
+
+  const scrollToBottom = () => {
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+  };
+
+  // Connect Socket
+  const connectSocket = () => {
+    socket = io(window.location.origin, {
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
+    });
+
+    socket.on('connect', () => {
+      connStatus.textContent = 'Online';
+      connStatus.style.background = '#25D366';
+      // Join global room
+      socket.emit('user:join', {
+        userId: currentUser._id,
+        username: currentUser.username,
+        displayName: currentUser.displayName,
+        avatarColor: currentUser.avatarColor,
+        room: 'global'
+      });
+    });
+
+    socket.on('disconnect', () => {
+      connStatus.textContent = 'Disconnected';
+      connStatus.style.background = '#e11d48';
+    });
+
+    socket.on('message:new', (msg) => {
+      renderMessage(msg);
+      scrollToBottom();
+      // If message is from someone else, notify read
+      if (currentUser && msg.senderUsername !== currentUser.username) {
+        socket.emit('message:read', {
+          messageId: msg._id,
+          userId: currentUser._id,
+          username: currentUser.username,
+          room: 'global'
+        });
+      }
+    });
+
+    socket.on('typing:start', (data) => {
+      if (currentUser && data.username !== currentUser.username) {
+        typingBar.textContent = `${data.username} is typing...`;
+      }
+    });
+
+    socket.on('typing:stop', (data) => {
+      if (currentUser && data.username !== currentUser.username) {
+        typingBar.textContent = '';
+      }
+    });
+
+    socket.on('users:online', (users) => {
+      if (!Array.isArray(users)) return;
+      onlineChipsList.innerHTML = users.map(u => `
+        <span class="online-chip">
+          <span class="online-dot"></span>
+          ${u.displayName || u.username}
+        </span>
+      `).join('');
+    });
+  };
+
+  // Typing debounce handler
+  const handleTyping = () => {
+    if (!socket || !currentUser) return;
+
+    socket.emit('typing:start', {
+      username: currentUser.username,
+      userId: currentUser._id,
+      room: 'global'
+    });
+
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      socket.emit('typing:stop', {
+        username: currentUser.username,
+        userId: currentUser._id,
+        room: 'global'
+      });
+    }, 1500);
+  };
+
+  // Send message via POST /api/messages
+  document.getElementById('sendForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = msgInput.value.trim();
+    if (!text || !currentUser) return;
+
+    msgInput.value = '';
+    sendBtn.disabled = true;
+
+    // Emit typing stop immediately
+    clearTimeout(typingTimer);
+    if (socket) {
+      socket.emit('typing:stop', {
+        username: currentUser.username,
+        userId: currentUser._id,
+        room: 'global'
+      });
+    }
+
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderId: currentUser._id,
+          senderUsername: currentUser.username,
+          senderDisplayName: currentUser.displayName,
+          senderAvatarColor: currentUser.avatarColor,
+          text,
+          room: 'global'
+        })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || 'Error sending message');
+      }
+    } catch (err) {
+      alert('Network error sending message: ' + err.message);
+    }
+  });
+</script>
+
+</body>
+</html>
