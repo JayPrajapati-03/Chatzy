@@ -33,6 +33,7 @@ import MessageInput  from '../components/MessageInput';
 import TypingIndicator from '../components/TypingIndicator';
 import OnlineUsersBar  from '../components/OnlineUsersBar';
 import ConnectionBanner from '../components/ConnectionBanner';
+import ActiveMembersModal from '../components/ActiveMembersModal';
 
 import { COLORS, GRADIENTS, DEFAULT_ROOM, HISTORY_LIMIT, FONTS, RADIUS, SHADOW } from '../utils/constants';
 import { formatDateLabel, isDifferentDay } from '../utils/formatTime';
@@ -129,6 +130,7 @@ export default function ChatScreen() {
   const [connStatus,     setConnStatus]     = useState('connecting');
   const [historyLoading, setHistoryLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
 
   const msgIdSet   = useRef(new Set());
   const flatListRef = useRef(null);
@@ -441,10 +443,15 @@ export default function ChatScreen() {
 
           <View>
             <Text style={styles.roomName}>Chatzy Global</Text>
-            <View style={styles.statusRow}>
+            <TouchableOpacity
+              style={styles.statusRow}
+              activeOpacity={0.7}
+              onPress={() => setShowMembersModal(true)}
+            >
               <StatusDot status={connStatus} />
               <Text style={styles.statusLabel}>{statusLabel}</Text>
-            </View>
+              {onlineCount > 0 && <Text style={styles.statusChevron}>›</Text>}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -472,7 +479,10 @@ export default function ChatScreen() {
       <ConnectionBanner status={connStatus} onRetry={handleRetry} />
 
       {/* ── Online Users ──────────────────────────────────────────────────── */}
-      <OnlineUsersBar users={onlineUsers} />
+      <OnlineUsersBar
+        users={onlineUsers}
+        onOpenMembersModal={() => setShowMembersModal(true)}
+      />
 
       {/* ── Chat Body ─────────────────────────────────────────────────────── */}
       <KeyboardAvoidingView
@@ -564,6 +574,14 @@ export default function ChatScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* ── Active Members Modal ────────────────────────────────────────── */}
+      <ActiveMembersModal
+        visible={showMembersModal}
+        onClose={() => setShowMembersModal(false)}
+        users={onlineUsers}
+        currentUser={user}
+      />
     </SafeAreaView>
   );
 }
@@ -626,6 +644,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     fontWeight: FONTS.medium,
+  },
+  statusChevron: {
+    fontSize: 13,
+    color: COLORS.accentCyan,
+    marginLeft: 2,
+    fontWeight: FONTS.bold,
   },
 
   headerRight: {
