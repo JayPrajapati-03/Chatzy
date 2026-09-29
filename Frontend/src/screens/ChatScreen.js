@@ -50,6 +50,52 @@ const DateSep = ({ label }) => (
   </View>
 );
 
+// ── Globe Icon (Web SVG + Native emoji fallback) ─────────────────────────────
+const GlobeIcon = ({ size = 16, color = COLORS.accentCyan }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ display: 'block' }}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    );
+  }
+  return <Text style={{ fontSize: size }}>🌐</Text>;
+};
+
+// ── Message Icon (Web SVG + Native emoji fallback) ───────────────────────────
+const MessageIcon = ({ size = 20, color = COLORS.accentCyan }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ display: 'block' }}
+      >
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    );
+  }
+  return <Text style={{ fontSize: size * 0.9 }}>💬</Text>;
+};
+
 const sepStyles = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
@@ -437,16 +483,14 @@ export default function ChatScreen() {
             style={styles.roomAvatarRing}
           >
             <View style={styles.roomAvatarInner}>
-              <Text style={styles.roomAvatarText}>#</Text>
+              <MessageIcon size={20} color={COLORS.accentCyan} />
             </View>
           </LinearGradient>
 
           <View>
             <View style={styles.titleRow}>
               <Text style={styles.roomName}>Chatzy Global</Text>
-              <View style={styles.verifiedBadge}>
-                <Text style={styles.verifiedCheck}>✓</Text>
-              </View>
+              <GlobeIcon size={16} color={COLORS.accentCyan} />
             </View>
             <TouchableOpacity
               style={styles.statusRow}
