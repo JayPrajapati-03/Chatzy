@@ -18,6 +18,7 @@ import {
   Alert,
   Animated,
   AppState,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -127,6 +128,7 @@ export default function ChatScreen() {
   const [onlineUsers,    setOnlineUsers]    = useState([]);
   const [connStatus,     setConnStatus]     = useState('connecting');
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const msgIdSet   = useRef(new Set());
   const flatListRef = useRef(null);
@@ -446,21 +448,14 @@ export default function ChatScreen() {
           </View>
         </View>
 
-        {/* User avatar + logout */}
+        {/* User avatar - tap to open profile & exit menu */}
         <View style={styles.headerRight}>
-          <View style={styles.myAvatarWrap}>
-            <View style={[styles.myAvatar, { backgroundColor: user?.avatarColor || COLORS.accentCyan }]}>
-              <Text style={styles.myAvatarText}>{userInitial}</Text>
-            </View>
-            <View
-              style={[
-                styles.myStatusBadge,
-                { backgroundColor: connStatus === 'connected' ? COLORS.accentGreen : COLORS.textMuted }
-              ]}
-            />
-          </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.7}>
-            <Text style={styles.logoutText}>Exit</Text>
+          <TouchableOpacity
+            style={[styles.myAvatar, { backgroundColor: user?.avatarColor || COLORS.accentCyan }]}
+            activeOpacity={0.7}
+            onPress={() => setShowProfileModal(true)}
+          >
+            <Text style={styles.myAvatarText}>{userInitial}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -526,6 +521,49 @@ export default function ChatScreen() {
           disabled={connStatus === 'disconnected'}
         />
       </KeyboardAvoidingView>
+
+      {/* ── Profile & Exit Popover Modal ──────────────────────────────────── */}
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowProfileModal(false)}
+        >
+          <View style={styles.profilePopover}>
+            <View style={styles.popoverHeader}>
+              <View style={[styles.popoverAvatar, { backgroundColor: user?.avatarColor || COLORS.accentCyan }]}>
+                <Text style={styles.popoverAvatarText}>{userInitial}</Text>
+              </View>
+              <View style={styles.popoverUserInfo}>
+                <Text style={styles.popoverDisplayName} numberOfLines={1}>
+                  {user?.displayName || user?.username}
+                </Text>
+                <Text style={styles.popoverUsername} numberOfLines={1}>
+                  @{user?.username}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.popoverDivider} />
+
+            <TouchableOpacity
+              style={styles.popoverExitBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                setShowProfileModal(false);
+                logout();
+              }}
+            >
+              <Text style={styles.popoverExitText}>Log Out</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -593,46 +631,95 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  myAvatarWrap: {
-    position: 'relative',
   },
   myAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.borderGlass,
-  },
-  myStatusBadge: {
-    position: 'absolute',
-    bottom: -1,
-    right: -1,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#161B27',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   myAvatarText: {
     fontSize: 14,
     fontWeight: FONTS.bold,
     color: COLORS.white,
   },
-  logoutBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: COLORS.white06,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.borderGlass,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: Platform.OS === 'ios' ? 95 : 65,
+    paddingRight: 16,
   },
-  logoutText: {
-    color: COLORS.textSecondary,
+  profilePopover: {
+    width: 220,
+    backgroundColor: '#161B27',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 14,
+    ...Platform.select({
+      web: { boxShadow: '0 10px 25px rgba(0,0,0,0.5)' },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        elevation: 10,
+      },
+    }),
+  },
+  popoverHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  popoverAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popoverAvatarText: {
+    fontSize: 15,
+    fontWeight: FONTS.bold,
+    color: COLORS.white,
+  },
+  popoverUserInfo: {
+    flex: 1,
+  },
+  popoverDisplayName: {
+    fontSize: 14,
+    fontWeight: FONTS.bold,
+    color: COLORS.textPrimary,
+  },
+  popoverUsername: {
     fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 1,
+  },
+  popoverDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 12,
+  },
+  popoverExitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: RADIUS.md,
+    paddingVertical: 9,
+  },
+  popoverExitText: {
+    color: COLORS.accentRed,
+    fontSize: 13,
     fontWeight: FONTS.semibold,
   },
   headerBottomLine: {
