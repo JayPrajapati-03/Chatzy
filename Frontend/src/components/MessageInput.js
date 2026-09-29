@@ -11,83 +11,122 @@ import {
 import { COLORS, FONTS, TYPING_STOP_DELAY_MS, MESSAGE_MAX_LENGTH } from '../utils/constants';
 import { nd } from '../utils/platform';
 
-// ── Pure View-based Icons (zero dependency, cross-platform) ───────────────────
+// ── Ultra-crisp Vector Icons (Web SVG + Native View fallback) ────────────────
 
-/** Plus icon — two perpendicular bars */
-const PlusIcon = ({ size = 20, color = '#8B95A8' }) => (
-  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-    <View style={{ position: 'absolute', width: size * 0.55, height: 2, backgroundColor: color, borderRadius: 1 }} />
-    <View style={{ position: 'absolute', width: 2, height: size * 0.55, backgroundColor: color, borderRadius: 1 }} />
-  </View>
-);
+/** Plus Icon */
+const PlusIcon = ({ size = 20, color = '#8B95A8' }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    );
+  }
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ position: 'absolute', width: size * 0.7, height: 2.2, backgroundColor: color, borderRadius: 1 }} />
+      <View style={{ position: 'absolute', width: 2.2, height: size * 0.7, backgroundColor: color, borderRadius: 1 }} />
+    </View>
+  );
+};
 
-/** Smiley outline icon — circle + two eyes + smile arc */
-const SmileyIcon = ({ size = 20, color = '#4B566B' }) => (
-  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-    <View style={{
-      width: size, height: size, borderRadius: size / 2,
-      borderWidth: 1.8, borderColor: color,
-      alignItems: 'center', justifyContent: 'center',
-    }}>
-      {/* Eyes */}
-      <View style={{ flexDirection: 'row', gap: size * 0.22, marginTop: -size * 0.06 }}>
-        <View style={{ width: size * 0.12, height: size * 0.12, borderRadius: size * 0.06, backgroundColor: color }} />
-        <View style={{ width: size * 0.12, height: size * 0.12, borderRadius: size * 0.06, backgroundColor: color }} />
-      </View>
-      {/* Smile */}
+/** Smiley outline icon */
+const SmileyIcon = ({ size = 20, color = '#4B566B' }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+        <line x1="9" y1="9" x2="9.01" y2="9" />
+        <line x1="15" y1="9" x2="15.01" y2="9" />
+      </svg>
+    );
+  }
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View style={{
-        width: size * 0.4, height: size * 0.2, borderBottomLeftRadius: size * 0.2,
-        borderBottomRightRadius: size * 0.2, borderBottomWidth: 1.8,
-        borderLeftWidth: 1.8, borderRightWidth: 1.8,
-        borderColor: color, marginTop: size * 0.04,
+        width: size, height: size, borderRadius: size / 2,
+        borderWidth: 1.8, borderColor: color,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <View style={{ flexDirection: 'row', gap: size * 0.22, marginTop: -size * 0.08 }}>
+          <View style={{ width: size * 0.12, height: size * 0.12, borderRadius: size * 0.06, backgroundColor: color }} />
+          <View style={{ width: size * 0.12, height: size * 0.12, borderRadius: size * 0.06, backgroundColor: color }} />
+        </View>
+        <View style={{
+          width: size * 0.44, height: size * 0.22,
+          borderBottomLeftRadius: size * 0.22, borderBottomRightRadius: size * 0.22,
+          borderBottomWidth: 1.8, borderColor: color,
+          marginTop: size * 0.05,
+        }} />
+      </View>
+    </View>
+  );
+};
+
+/** Mic outline icon */
+const MicIcon = ({ size = 20, color = '#8B95A8' }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line x1="12" y1="19" x2="12" y2="23" />
+        <line x1="8" y1="23" x2="16" y2="23" />
+      </svg>
+    );
+  }
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{
+        width: size * 0.36, height: size * 0.52, borderRadius: size * 0.18,
+        borderWidth: 1.8, borderColor: color, position: 'absolute', top: size * 0.06,
+      }} />
+      <View style={{
+        width: size * 0.6, height: size * 0.38,
+        borderBottomLeftRadius: size * 0.3, borderBottomRightRadius: size * 0.3,
+        borderBottomWidth: 1.8, borderLeftWidth: 1.8, borderRightWidth: 1.8,
+        borderColor: color, position: 'absolute', top: size * 0.26,
+      }} />
+      <View style={{
+        width: 1.8, height: size * 0.18, backgroundColor: color,
+        position: 'absolute', bottom: size * 0.08,
+      }} />
+      <View style={{
+        width: size * 0.36, height: 1.8, backgroundColor: color, borderRadius: 1,
+        position: 'absolute', bottom: size * 0.07,
       }} />
     </View>
-  </View>
-);
+  );
+};
 
-/** Mic outline icon — pill shape + stand */
-const MicIcon = ({ size = 20, color = '#8B95A8' }) => (
-  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-    {/* Mic body */}
-    <View style={{
-      width: size * 0.35, height: size * 0.5,
-      borderRadius: size * 0.175, borderWidth: 1.8,
-      borderColor: color, position: 'absolute', top: size * 0.05,
-    }} />
-    {/* Arc */}
-    <View style={{
-      width: size * 0.55, height: size * 0.35,
-      borderBottomLeftRadius: size * 0.275, borderBottomRightRadius: size * 0.275,
-      borderBottomWidth: 1.8, borderLeftWidth: 1.8, borderRightWidth: 1.8,
-      borderColor: color, position: 'absolute', top: size * 0.3,
-    }} />
-    {/* Stand */}
-    <View style={{
-      width: 1.8, height: size * 0.15, backgroundColor: color,
-      position: 'absolute', bottom: size * 0.05,
-    }} />
-  </View>
-);
-
-/** Arrow Up icon — clean upward arrow */
-const ArrowUpIcon = ({ size = 18, color = '#fff' }) => (
-  <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-    {/* Shaft */}
-    <View style={{ width: 2.2, height: size * 0.6, backgroundColor: color, borderRadius: 1 }} />
-    {/* Left wing */}
-    <View style={{
-      position: 'absolute', top: size * 0.15, width: size * 0.35, height: 2.2,
-      backgroundColor: color, borderRadius: 1,
-      transform: [{ rotate: '45deg' }], left: size * 0.15,
-    }} />
-    {/* Right wing */}
-    <View style={{
-      position: 'absolute', top: size * 0.15, width: size * 0.35, height: 2.2,
-      backgroundColor: color, borderRadius: 1,
-      transform: [{ rotate: '-45deg' }], right: size * 0.15,
-    }} />
-  </View>
-);
+/** Upward Arrow / Send icon — clean arrow pointing UP */
+const ArrowUpIcon = ({ size = 18, color = '#fff' }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+        <line x1="12" y1="19" x2="12" y2="5" />
+        <polyline points="5 12 12 5 19 12" />
+      </svg>
+    );
+  }
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{
+        width: size * 0.42,
+        height: size * 0.42,
+        borderTopWidth: 2.2,
+        borderLeftWidth: 2.2,
+        borderColor: color,
+        transform: [{ rotate: '45deg' }],
+        marginBottom: -size * 0.14,
+        borderTopLeftRadius: 1.5,
+      }} />
+      <View style={{ width: 2.2, height: size * 0.5, backgroundColor: color, borderRadius: 1 }} />
+    </View>
+  );
+};
 
 /**
  * Premium MessageInput — flagship composer dock with attach, emoji, mic, and send.
@@ -288,7 +327,7 @@ const styles = StyleSheet.create({
     }),
   },
   sendBtnInactive: {
-    backgroundColor: COLORS.bgInputField,
+    backgroundColor: COLORS.white06,
   },
 });
 
