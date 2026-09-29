@@ -1,110 +1,112 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Animated,
+  Dimensions,
+  StatusBar,
   KeyboardAvoidingView,
   Platform,
-  Animated,
-  Easing,
   ActivityIndicator,
-  StatusBar,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
-import { COLORS, GRADIENTS, RADIUS, SHADOW, FONTS } from '../utils/constants';
+import { COLORS, RADIUS, FONTS } from '../utils/constants';
 import { nd } from '../utils/platform';
 
 const { width, height } = Dimensions.get('window');
 
-// ── Floating orb decoration ──────────────────────────────────────────────────
-const FloatingOrb = ({ style, color, size, delay = 0 }) => {
-  const anim = useRef(new Animated.Value(0)).current;
+/**
+ * Chatzy Production Login Screen with dynamic ambient glows,
+ * interactive card, and animated visual identity.
+ */
+export default function LoginScreen() {
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Background Animation Values
+  const orb1Anim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const orb2Anim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
+    // Orb 1 Floating Animation Loop
     Animated.loop(
       Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 4000,
-          easing: Easing.inOut(Easing.sin),
+        Animated.timing(orb1Anim, {
+          toValue: { x: 30, y: -40 },
+          duration: 7000,
           useNativeDriver: nd,
         }),
-        Animated.timing(anim, {
-          toValue: 0,
-          duration: 4000,
-          easing: Easing.inOut(Easing.sin),
+        Animated.timing(orb1Anim, {
+          toValue: { x: -20, y: 30 },
+          duration: 8000,
+          useNativeDriver: nd,
+        }),
+        Animated.timing(orb1Anim, {
+          toValue: { x: 0, y: 0 },
+          duration: 7000,
           useNativeDriver: nd,
         }),
       ])
     ).start();
-  }, []);
 
-  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -20] });
-  const opacity = anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.15, 0.28, 0.15] });
-
-  return (
-    <Animated.View
-      style={[
-        {
-          position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: color,
-          transform: [{ translateY }],
-          opacity,
-        },
-        style,
-      ]}
-    />
-  );
-};
-
-// ── Main Login Screen ─────────────────────────────────────────────────────────
-export default function LoginScreen() {
-  const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [focused, setFocused] = useState(false);
-
-  // Animations
-  const shakeAnim  = useRef(new Animated.Value(0)).current;
-  const cardAnim   = useRef(new Animated.Value(0)).current;
-  const logoAnim   = useRef(new Animated.Value(0)).current;
-  const pulseAnim  = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    // Entry animation
-    Animated.stagger(120, [
-      Animated.spring(logoAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: nd }),
-      Animated.spring(cardAnim, { toValue: 1, tension: 60, friction: 8, useNativeDriver: nd }),
-    ]).start();
-
-    // Logo pulse
+    // Orb 2 Floating Animation Loop
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.07, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: nd }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.ease), useNativeDriver: nd }),
+        Animated.timing(orb2Anim, {
+          toValue: { x: -35, y: 30 },
+          duration: 9000,
+          useNativeDriver: nd,
+        }),
+        Animated.timing(orb2Anim, {
+          toValue: { x: 25, y: -25 },
+          duration: 8500,
+          useNativeDriver: nd,
+        }),
+        Animated.timing(orb2Anim, {
+          toValue: { x: 0, y: 0 },
+          duration: 9000,
+          useNativeDriver: nd,
+        }),
+      ])
+    ).start();
+
+    // Logo Subtle Pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 2500,
+          useNativeDriver: nd,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: nd,
+        }),
       ])
     ).start();
   }, []);
 
   const shake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 12, duration: 55, useNativeDriver: nd }),
-      Animated.timing(shakeAnim, { toValue: -12, duration: 55, useNativeDriver: nd }),
-      Animated.timing(shakeAnim, { toValue: 8, duration: 55, useNativeDriver: nd }),
-      Animated.timing(shakeAnim, { toValue: -8, duration: 55, useNativeDriver: nd }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 55, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: nd }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: nd }),
     ]).start();
   };
 
-  const handleJoin = async () => {
+  const handleEnter = async () => {
     const trimmed = username.trim().toLowerCase();
     if (!trimmed || trimmed.length < 2) {
       setError('Username must be at least 2 characters.');
@@ -116,354 +118,417 @@ export default function LoginScreen() {
       shake();
       return;
     }
+
     setError('');
     setLoading(true);
     try {
       await login(trimmed);
     } catch (err) {
-      setError(err.message || 'Could not connect. Check your network.');
+      setError(err.message || 'Could not connect. Check your server connection.');
       shake();
     } finally {
       setLoading(false);
     }
   };
 
-  const logoTranslateY = logoAnim.interpolate({ inputRange: [0, 1], outputRange: [-40, 0] });
-  const cardTranslateY = cardAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] });
-
   return (
-    <LinearGradient colors={GRADIENTS.loginBg} style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Decorative Orbs */}
-      <FloatingOrb color={COLORS.accentCyan}   size={280} style={{ top: -60, right: -80 }}   delay={0} />
-      <FloatingOrb color={COLORS.accentViolet} size={200} style={{ top: 180, left: -90 }}    delay={800} />
-      <FloatingOrb color={COLORS.accentCyan}   size={120} style={{ bottom: 80, right: 40 }}  delay={400} />
-      <FloatingOrb color={COLORS.accentViolet} size={160} style={{ bottom: 200, left: -40 }} delay={1200} />
-
-      {/* Grid overlay */}
-      <View style={[styles.gridOverlay, { pointerEvents: 'none' }]} />
+      {/* Dynamic Animated Background Ambient Glows */}
+      <Animated.View
+        style={[
+          styles.ambientOrb,
+          styles.orbCyan,
+          {
+            transform: [
+              { translateX: orb1Anim.x },
+              { translateY: orb1Anim.y },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.ambientOrb,
+          styles.orbPurple,
+          {
+            transform: [
+              { translateX: orb2Anim.x },
+              { translateY: orb2Anim.y },
+            ],
+          },
+        ]}
+      />
 
       <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.innerContent}
       >
-        <View style={styles.inner}>
-          {/* ── Logo Area ── */}
-          <Animated.View
-            style={[
-              styles.logoArea,
-              {
-                opacity: logoAnim,
-                transform: [{ translateY: logoTranslateY }, { scale: pulseAnim }],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={[COLORS.accentCyan, COLORS.accentViolet]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.logoRing}
-            >
-              <View style={styles.logoInner}>
-                <Text style={styles.logoEmoji}>💬</Text>
-              </View>
-            </LinearGradient>
-
-            <Text style={styles.appName}>Chatzy</Text>
-            <View style={styles.taglineRow}>
-              <View style={[styles.taglineDot, { backgroundColor: COLORS.accentCyan }]} />
-              <Text style={styles.tagline}>Real-time · Global · Instant</Text>
-              <View style={[styles.taglineDot, { backgroundColor: COLORS.accentViolet }]} />
+        {/* Brand Header */}
+        <View style={styles.headerContainer}>
+          <Animated.View style={[styles.logoOuterRing, { transform: [{ scale: pulseAnim }] }]}>
+            <View style={styles.logoInnerDisc}>
+              <Text style={styles.chatIcon}>💬</Text>
             </View>
           </Animated.View>
 
-          {/* ── Card ── */}
-          <Animated.View
-            style={[
-              styles.cardWrap,
-              {
-                opacity: cardAnim,
-                transform: [
-                  { translateY: cardTranslateY },
-                  { translateX: shakeAnim },
-                ],
-              },
-            ]}
-          >
-            {/* Glass card */}
-            <View style={styles.card}>
-              {/* Top accent line */}
-              <LinearGradient
-                colors={[COLORS.accentCyan, COLORS.accentViolet]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.cardAccentLine}
-              />
+          <Text style={styles.brandTitle}>Chatzy</Text>
 
-              <Text style={styles.cardTitle}>Join the Room</Text>
-              <Text style={styles.cardSubtitle}>
-                Choose your identity to enter the global chatroom
-              </Text>
+          <View style={styles.taglineRow}>
+            <View style={styles.cyanDot} />
+            <Text style={styles.taglineText}>REAL-TIME</Text>
+            <View style={styles.cyanDot} />
+            <Text style={styles.taglineText}>GLOBAL</Text>
+            <View style={styles.cyanDot} />
+            <Text style={styles.taglineText}>INSTANT</Text>
+            <View style={styles.cyanDot} />
+          </View>
+        </View>
 
-              {/* Input */}
-              <View style={[styles.inputContainer, focused && styles.inputContainerFocused]}>
-                <Text style={styles.inputPrefix}>@</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="your_username"
-                  placeholderTextColor={COLORS.textMuted}
-                  value={username}
-                  onChangeText={(t) => { setUsername(t); if (error) setError(''); }}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setFocused(false)}
-                  onSubmitEditing={handleJoin}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  maxLength={30}
-                  editable={!loading}
-                  selectionColor={COLORS.accentCyan}
-                />
-                {username.length > 0 && (
-                  <TouchableOpacity onPress={() => { setUsername(''); setError(''); }}>
-                    <Text style={styles.clearBtn}>✕</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+        {/* Glassmorphic Interaction Card */}
+        <Animated.View style={[styles.cardContainer, { transform: [{ translateX: shakeAnim }] }]}>
+          <Text style={styles.cardTitle}>Join the Room</Text>
+          <Text style={styles.cardSubtitle}>
+            Choose your identity to enter the global chatroom
+          </Text>
 
-              {/* Error */}
-              {!!error && (
-                <View style={styles.errorRow}>
-                  <Text style={styles.errorIcon}>⚠</Text>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-
-              {/* CTA Button */}
-              <TouchableOpacity
-                onPress={handleJoin}
-                disabled={!username.trim() || loading}
-                activeOpacity={0.85}
-                style={styles.btnWrap}
-              >
-                <LinearGradient
-                  colors={
-                    !username.trim() || loading
-                      ? ['#1C2333', '#1C2333']
-                      : [COLORS.accentCyan, COLORS.accentViolet]
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.btn}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={COLORS.white} size="small" />
-                  ) : (
-                    <Text style={[styles.btnText, (!username.trim()) && styles.btnTextDisabled]}>
-                      Enter Chatroom  →
-                    </Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Hint */}
-              <Text style={styles.hint}>
-                New users are created automatically · No password required
-              </Text>
+          {/* Input Box */}
+          <View style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}>
+            <View style={styles.badgeAt}>
+              <Text style={styles.atSymbol}>@</Text>
             </View>
-          </Animated.View>
+            <TextInput
+              style={styles.textInput}
+              placeholder="your_username"
+              placeholderTextColor="#5a657c"
+              value={username}
+              onChangeText={(t) => {
+                setUsername(t);
+                if (error) setError('');
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={handleEnter}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              editable={!loading}
+            />
+          </View>
+
+          {/* Error Message */}
+          {!!error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorIcon}>⚠</Text>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Enter Button */}
+          <TouchableOpacity
+            activeOpacity={0.82}
+            style={[styles.enterButton, (!username.trim() || loading) && styles.enterButtonDisabled]}
+            onPress={handleEnter}
+            disabled={!username.trim() || loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.enterButtonText}>Enter Chatroom →</Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.footerNote}>
+            New users are created automatically · No password required
+          </Text>
+        </Animated.View>
+
+        {/* Bottom Live Indicator */}
+        <View style={styles.onlineBadge}>
+          <View style={styles.greenPulseDot} />
+          <Text style={styles.onlineText}>Connected · Live Global Room</Text>
         </View>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
-  },
-  gridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.025,
-    backgroundImage: undefined,
-    // Simulated grid via border
-  },
-  kav: { flex: 1 },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#0a0d16',
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  innerContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 440,
     paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+    justifyContent: 'space-between',
+    paddingVertical: Platform.OS === 'web' ? 44 : 56,
+    alignItems: 'center',
+    zIndex: 10,
   },
 
-  // ── Logo ──
-  logoArea: {
+  /* Ambient Orbs */
+  ambientOrb: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.35,
+  },
+  orbCyan: {
+    width: width * 0.9,
+    height: width * 0.9,
+    backgroundColor: '#00d2ff',
+    top: height * 0.05,
+    right: -width * 0.2,
+    ...Platform.select({
+      web: { boxShadow: '0 0 120px rgba(0, 210, 255, 0.45)' },
+      default: {
+        shadowColor: '#00d2ff',
+        shadowOpacity: 0.8,
+        shadowRadius: 100,
+        elevation: 20,
+      },
+    }),
+  },
+  orbPurple: {
+    width: width * 0.85,
+    height: width * 0.85,
+    backgroundColor: '#6b21a8',
+    bottom: height * 0.1,
+    left: -width * 0.2,
+    ...Platform.select({
+      web: { boxShadow: '0 0 120px rgba(139, 92, 246, 0.4)' },
+      default: {
+        shadowColor: '#8b5cf6',
+        shadowOpacity: 0.7,
+        shadowRadius: 100,
+        elevation: 20,
+      },
+    }),
+  },
+
+  /* Header */
+  headerContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginTop: 10,
   },
-  logoRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    padding: 3,
-    marginBottom: 20,
-    ...SHADOW.cyanGlow,
-  },
-  logoInner: {
-    flex: 1,
-    backgroundColor: COLORS.bgSurface,
-    borderRadius: 45,
+  logoOuterRing: {
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    backgroundColor: 'rgba(0, 210, 255, 0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 210, 255, 0.4)',
+    alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      web: { boxShadow: '0 0 25px rgba(0, 210, 255, 0.35)' },
+      default: {
+        shadowColor: '#00d2ff',
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+      },
+    }),
+  },
+  logoInnerDisc: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: '#111728',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
-  logoEmoji: {
-    fontSize: 40,
+  chatIcon: {
+    fontSize: 32,
   },
-  appName: {
-    fontSize: 40,
-    fontWeight: FONTS.black,
-    color: COLORS.textPrimary,
-    letterSpacing: 2,
-    marginBottom: 10,
+  brandTitle: {
+    fontSize: 38,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -0.5,
+    marginTop: 18,
   },
   taglineRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 10,
     gap: 8,
   },
-  taglineDot: {
+  cyanDot: {
     width: 5,
     height: 5,
-    borderRadius: 3,
+    borderRadius: 2.5,
+    backgroundColor: '#00d2ff',
   },
-  tagline: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: FONTS.medium,
+  taglineText: {
+    color: '#00d2ff',
+    fontSize: 10.5,
+    fontWeight: '700',
     letterSpacing: 1.5,
-    textTransform: 'uppercase',
   },
 
-  // ── Card ──
-  cardWrap: {
+  /* Card */
+  cardContainer: {
     width: '100%',
-    maxWidth: 420,
-  },
-  card: {
-    backgroundColor: 'rgba(22,27,39,0.9)',
-    borderRadius: RADIUS.xl,
+    backgroundColor: 'rgba(18, 23, 38, 0.85)',
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
-    borderColor: COLORS.borderGlass,
-    overflow: 'hidden',
-    ...SHADOW.card,
-  },
-  cardAccentLine: {
-    height: 2,
-    width: '100%',
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: FONTS.bold,
-    color: COLORS.textPrimary,
-    marginTop: 28,
-    marginHorizontal: 28,
-    marginBottom: 6,
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginHorizontal: 28,
-    marginBottom: 28,
-    lineHeight: 19,
-  },
-
-  // ── Input ──
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.bgInputField,
-    borderRadius: RADIUS.md,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    marginHorizontal: 24,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    height: 54,
-  },
-  inputContainerFocused: {
-    borderColor: COLORS.accentCyan,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     ...Platform.select({
-      web: { boxShadow: '0 0 10px rgba(0, 212, 255, 0.3)' },
+      web: { boxShadow: '0 16px 36px rgba(0, 0, 0, 0.5)' },
       default: {
-        shadowColor: COLORS.accentCyan,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.45,
+        shadowRadius: 32,
+        elevation: 12,
       },
     }),
   },
-  inputPrefix: {
-    fontSize: 20,
-    color: COLORS.accentCyan,
-    fontWeight: FONTS.bold,
-    marginRight: 8,
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#ffffff',
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    fontWeight: FONTS.medium,
-    padding: 0,
+  cardSubtitle: {
+    fontSize: 13,
+    color: '#8b96ad',
+    marginTop: 6,
+    marginBottom: 20,
+    lineHeight: 18,
   },
-  clearBtn: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    paddingLeft: 8,
-  },
-
-  // ── Error ──
-  errorRow: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 28,
-    marginBottom: 10,
-    gap: 6,
+    backgroundColor: 'rgba(11, 15, 26, 0.85)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+    paddingHorizontal: 12,
+    height: 52,
+    marginBottom: 12,
   },
-  errorIcon: { fontSize: 13, color: COLORS.accentRed },
-  errorText: {
+  inputWrapperFocused: {
+    borderColor: '#00d2ff',
+    ...Platform.select({
+      web: { boxShadow: '0 0 12px rgba(0, 210, 255, 0.35)' },
+      default: {
+        shadowColor: '#00d2ff',
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+    }),
+  },
+  badgeAt: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 210, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  atSymbol: {
+    color: '#00d2ff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  textInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 15,
+    padding: 0,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 14,
+    gap: 8,
+  },
+  errorIcon: {
     fontSize: 13,
-    color: COLORS.accentRed,
+    color: '#EF4444',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    fontWeight: '500',
     flex: 1,
   },
-
-  // ── Button ──
-  btnWrap: { marginHorizontal: 24, marginTop: 8, borderRadius: RADIUS.md, overflow: 'hidden' },
-  btn: {
-    height: 54,
-    borderRadius: RADIUS.md,
-    justifyContent: 'center',
+  enterButton: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#1b243b',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 210, 255, 0.35)',
     alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      web: { boxShadow: '0 4px 16px rgba(0, 210, 255, 0.2)' },
+      default: {
+        shadowColor: '#00d2ff',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+        elevation: 4,
+      },
+    }),
   },
-  btnText: {
-    fontSize: 16,
-    fontWeight: FONTS.bold,
-    color: COLORS.white,
-    letterSpacing: 0.5,
+  enterButtonDisabled: {
+    opacity: 0.6,
   },
-  btnTextDisabled: {
-    color: COLORS.textMuted,
+  enterButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  hint: {
+  footerNote: {
+    color: '#65728d',
     fontSize: 11,
-    color: COLORS.textMuted,
     textAlign: 'center',
-    marginHorizontal: 28,
-    marginTop: 18,
-    marginBottom: 28,
-    lineHeight: 17,
+    marginTop: 16,
+    lineHeight: 15,
+  },
+
+  /* Online Status */
+  onlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 12,
+  },
+  greenPulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#00f5ff',
+    ...Platform.select({
+      web: { boxShadow: '0 0 8px #00f5ff' },
+      default: {
+        shadowColor: '#00f5ff',
+        shadowOpacity: 0.8,
+        shadowRadius: 6,
+      },
+    }),
+  },
+  onlineText: {
+    color: '#808da5',
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
