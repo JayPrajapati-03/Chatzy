@@ -1,29 +1,28 @@
-import React from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import { COLORS } from './src/utils/constants';
 
 /**
- * Navigator — renders the correct screen based on auth state.
- * No external navigation library needed: we have only two screens.
+ * Navigator — manages the lifecycle:
+ * Splash Screen -> Login Screen -> Chat Screen
  */
 const Navigator = () => {
   const { user, loading } = useAuth();
+  const [isSplashDone, setIsSplashDone] = useState(false);
 
-  if (loading) {
-    // Show a full-screen spinner while AsyncStorage is being read
-    return (
-      <View style={styles.splash}>
-        <ActivityIndicator size="large" color={COLORS.accentGreen} />
-      </View>
-    );
+  // Always show the next-level Splash Screen on initial app launch / page refresh
+  if (!isSplashDone || loading) {
+    return <SplashScreen onFinish={() => setIsSplashDone(true)} />;
   }
 
+  // Once splash screen finishes: LoginScreen (if unauthenticated) or ChatScreen (if authenticated)
   return user ? <ChatScreen /> : <LoginScreen />;
 };
 
@@ -33,7 +32,7 @@ const Navigator = () => {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" backgroundColor={COLORS.bgHeader} />
+      <StatusBar style="light" backgroundColor={COLORS.bgBase} />
       <AuthProvider>
         <Navigator />
       </AuthProvider>
@@ -42,10 +41,8 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  splash: {
+  container: {
     flex: 1,
-    backgroundColor: COLORS.bgDark,
-    justifyContent: 'center',
-    alignItems: 'center'
-  }
+    backgroundColor: COLORS.bgBase,
+  },
 });
