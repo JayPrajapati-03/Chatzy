@@ -1,9 +1,7 @@
 # Chatzy 💬 — Real-Time Production Chat Application
 
-> **Vedaz Assessment Submission**  
-> **Role:** Software Developer  
-> **Candidate:** Jay Prajapati  
-> **Repository:** Chatzy (Full-Stack Real-Time Mobile Chat)  
+Jay Prajapati  
+Chatzy (Full-Stack Real-Time Mobile Chat)  
 
 ---
 
