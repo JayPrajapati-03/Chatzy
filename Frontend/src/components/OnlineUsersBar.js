@@ -24,9 +24,6 @@ const OnlineUsersBar = ({ users, onOpenMembersModal }) => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* Active Now Label */}
-        <Text style={styles.activeLabel}>ACTIVE NOW:</Text>
-
         {visibleUsers.map((u, i) => {
           const initial = (u.displayName || u.username || '?').charAt(0).toUpperCase();
           const isOnline = u.isOnline !== undefined ? u.isOnline : true;
@@ -81,13 +78,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     gap: 10,
-  },
-  activeLabel: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: FONTS.bold,
-    letterSpacing: 0.8,
-    marginRight: 2,
   },
   userChip: {
     flexDirection: 'row',

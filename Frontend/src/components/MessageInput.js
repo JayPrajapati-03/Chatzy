@@ -10,126 +10,119 @@ import {
 } from 'react-native';
 import { COLORS, FONTS, TYPING_STOP_DELAY_MS, MESSAGE_MAX_LENGTH } from '../utils/constants';
 import { nd } from '../utils/platform';
+import EmojiPickerBoard from './EmojiPickerBoard';
 
-// ── Ultra-crisp Vector Icons (Web SVG + Native View fallback) ────────────────
+// ── 1:1 WhatsApp Vector Icons (Crisp Web SVG + Native fallback) ──────────────
 
-/** Plus Icon */
-const PlusIcon = ({ size = 20, color = '#8B95A8' }) => {
+/** WhatsApp Official Smiley Outline Icon */
+const WhatsAppSmileyIcon = ({ size = 23, color = '#8696A0' }) => {
   if (Platform.OS === 'web') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ display: 'block' }}
+      >
+        <circle cx="12" cy="12" r="9.5" />
+        <path d="M8 13.8c.9 1.8 2.4 2.6 4 2.6s3.1-.8 4-2.6" strokeWidth="1.9" />
+        <circle cx="9" cy="9.5" r="1.2" fill={color} stroke="none" />
+        <circle cx="15" cy="9.5" r="1.2" fill={color} stroke="none" />
       </svg>
     );
   }
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ position: 'absolute', width: size * 0.7, height: 2.2, backgroundColor: color, borderRadius: 1 }} />
-      <View style={{ position: 'absolute', width: 2.2, height: size * 0.7, backgroundColor: color, borderRadius: 1 }} />
-    </View>
-  );
+  return <Text style={{ fontSize: 18 }}>😊</Text>;
 };
 
-/** Smiley outline icon */
-const SmileyIcon = ({ size = 20, color = '#4B566B' }) => {
+/** WhatsApp Official Paperclip / Attach Icon */
+const WhatsAppPaperclipIcon = ({ size = 21, color = '#8696A0' }) => {
   if (Platform.OS === 'web') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-        <circle cx="12" cy="12" r="10" />
-        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-        <line x1="9" y1="9" x2="9.01" y2="9" />
-        <line x1="15" y1="9" x2="15.01" y2="9" />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="2.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ display: 'block', transform: 'rotate(-45deg)' }}
+      >
+        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
       </svg>
     );
   }
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{
-        width: size, height: size, borderRadius: size / 2,
-        borderWidth: 1.8, borderColor: color,
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <View style={{ flexDirection: 'row', gap: size * 0.22, marginTop: -size * 0.08 }}>
-          <View style={{ width: size * 0.12, height: size * 0.12, borderRadius: size * 0.06, backgroundColor: color }} />
-          <View style={{ width: size * 0.12, height: size * 0.12, borderRadius: size * 0.06, backgroundColor: color }} />
-        </View>
-        <View style={{
-          width: size * 0.44, height: size * 0.22,
-          borderBottomLeftRadius: size * 0.22, borderBottomRightRadius: size * 0.22,
-          borderBottomWidth: 1.8, borderColor: color,
-          marginTop: size * 0.05,
-        }} />
-      </View>
-    </View>
-  );
+  return <Text style={{ fontSize: 18 }}>📎</Text>;
 };
 
-/** Mic outline icon */
-const MicIcon = ({ size = 20, color = '#8B95A8' }) => {
+/** WhatsApp Official Camera Icon */
+const WhatsAppCameraIcon = ({ size = 21, color = '#8696A0' }) => {
   if (Platform.OS === 'web') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-        <line x1="12" y1="19" x2="12" y2="23" />
-        <line x1="8" y1="23" x2="16" y2="23" />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ display: 'block' }}
+      >
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+        <circle cx="12" cy="13" r="4" />
       </svg>
     );
   }
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{
-        width: size * 0.36, height: size * 0.52, borderRadius: size * 0.18,
-        borderWidth: 1.8, borderColor: color, position: 'absolute', top: size * 0.06,
-      }} />
-      <View style={{
-        width: size * 0.6, height: size * 0.38,
-        borderBottomLeftRadius: size * 0.3, borderBottomRightRadius: size * 0.3,
-        borderBottomWidth: 1.8, borderLeftWidth: 1.8, borderRightWidth: 1.8,
-        borderColor: color, position: 'absolute', top: size * 0.26,
-      }} />
-      <View style={{
-        width: 1.8, height: size * 0.18, backgroundColor: color,
-        position: 'absolute', bottom: size * 0.08,
-      }} />
-      <View style={{
-        width: size * 0.36, height: 1.8, backgroundColor: color, borderRadius: 1,
-        position: 'absolute', bottom: size * 0.07,
-      }} />
-    </View>
-  );
+  return <Text style={{ fontSize: 18 }}>📷</Text>;
 };
 
-/** Upward Arrow / Send icon — clean arrow pointing UP */
-const ArrowUpIcon = ({ size = 18, color = '#fff' }) => {
+/** WhatsApp Official Voice Note Mic Icon (Authentic WhatsApp dark icon on green) */
+const WhatsAppMicIcon = ({ size = 22, color = '#111B21' }) => {
   if (Platform.OS === 'web') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-        <line x1="12" y1="19" x2="12" y2="5" />
-        <polyline points="5 12 12 5 19 12" />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill={color}
+        style={{ display: 'block' }}
+      >
+        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
       </svg>
     );
   }
-  return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{
-        width: size * 0.42,
-        height: size * 0.42,
-        borderTopWidth: 2.2,
-        borderLeftWidth: 2.2,
-        borderColor: color,
-        transform: [{ rotate: '45deg' }],
-        marginBottom: -size * 0.14,
-        borderTopLeftRadius: 1.5,
-      }} />
-      <View style={{ width: 2.2, height: size * 0.5, backgroundColor: color, borderRadius: 1 }} />
-    </View>
-  );
+  return <Text style={{ fontSize: 18, color }}>🎙️</Text>;
+};
+
+/** WhatsApp Official Paper Airplane Send Icon */
+const WhatsAppSendIcon = ({ size = 20, color = '#FFFFFF' }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill={color}
+        style={{ display: 'block', marginLeft: 2 }}
+      >
+        <path d="M1.101 21.757L23.8 12.028 1.101 2.3 1 9.87l15.143 2.158L1 14.186l.101 7.571z" />
+      </svg>
+    );
+  }
+  return <Text style={{ fontSize: 16, color }}>➤</Text>;
 };
 
 /**
- * Premium MessageInput — flagship composer dock with attach, emoji, mic, send, and reply banner.
+ * Premium MessageInput — 1:1 WhatsApp Composer dock with Attach, Emoji, Mic/Send, and Reply banner.
  */
 const MessageInput = ({
   onSend,
@@ -142,6 +135,8 @@ const MessageInput = ({
 }) => {
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const inputRef = useRef(null);
   const typingTimerRef = useRef(null);
   const isTypingRef   = useRef(false);
   const sendScale     = useRef(new Animated.Value(1)).current;
@@ -170,18 +165,35 @@ const MessageInput = ({
     [onTypingStart, onTypingStop]
   );
 
+  const handleToggleEmoji = useCallback(() => {
+    setShowEmojiPicker((prev) => !prev);
+  }, []);
+
+  const handleInsertEmoji = useCallback(
+    (emoji) => {
+      handleChangeText(text + emoji);
+    },
+    [text, handleChangeText]
+  );
+
+  const handleBackspace = useCallback(() => {
+    if (!text) return;
+    const chars = Array.from(text);
+    chars.pop();
+    handleChangeText(chars.join(''));
+  }, [text, handleChangeText]);
+
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
 
-    // Check if user typed /poll command
     if (trimmed.toLowerCase() === '/poll') {
       setText('');
+      setShowEmojiPicker(false);
       onOpenPollModal?.();
       return;
     }
 
-    // Pop animation
     Animated.sequence([
       Animated.spring(sendScale, { toValue: 0.82, speed: 80, useNativeDriver: nd }),
       Animated.spring(sendScale, { toValue: 1,    speed: 80, useNativeDriver: nd }),
@@ -193,6 +205,7 @@ const MessageInput = ({
       onTypingStop?.();
     }
     setText('');
+    setShowEmojiPicker(false);
     onSend(trimmed, replyingTo);
   }, [text, disabled, onSend, onTypingStop, sendScale, replyingTo, onOpenPollModal]);
 
@@ -226,174 +239,186 @@ const MessageInput = ({
       <View style={styles.topLine} />
 
       <View style={styles.row}>
-        {/* Attach button (Opens Live Poll modal or actions) */}
-        <TouchableOpacity
-          style={styles.actionBtn}
-          activeOpacity={0.7}
-          onPress={onOpenPollModal}
-        >
-          <PlusIcon size={20} color={COLORS.textSecondary} />
-        </TouchableOpacity>
-
-        {/* Input container with inline emoji */}
+        {/* WhatsApp-Style Pill Input: [ 😊 ] [ Message ] [ 📎 ] [ 📷 ] */}
         <View style={[styles.inputPill, focused && styles.inputPillFocused]}>
+          {/* WhatsApp Smiley toggle button on LEFT */}
+          <TouchableOpacity
+            style={styles.inlineActionLeft}
+            activeOpacity={0.7}
+            onPress={handleToggleEmoji}
+          >
+            <WhatsAppSmileyIcon
+              size={23}
+              color={showEmojiPicker ? '#00A884' : '#8696A0'}
+            />
+          </TouchableOpacity>
+
+          {/* Main Text Input */}
           <TextInput
+            ref={inputRef}
             style={styles.input}
             value={text}
             onChangeText={handleChangeText}
             onSubmitEditing={handleSend}
-            onFocus={() => setFocused(true)}
+            onFocus={() => {
+              setFocused(true);
+              setShowEmojiPicker(false);
+            }}
             onBlur={() => setFocused(false)}
             placeholder={
               disabled
                 ? 'No connection…'
                 : replyingTo
                 ? 'Type your reply…'
-                : 'Type a message (or /poll)…'
+                : 'Message'
             }
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor="#8696A0"
             multiline
             maxLength={MESSAGE_MAX_LENGTH}
             returnKeyType="send"
             blurOnSubmit={false}
             editable={!disabled}
-            selectionColor={COLORS.accentCyan}
+            selectionColor="#00A884"
           />
+
+          {/* WhatsApp Paperclip (Attach / Poll) button inside pill */}
           <TouchableOpacity
-            style={styles.inlineAction}
+            style={styles.inlineActionIcon}
             activeOpacity={0.7}
-            onPress={() => setText((prev) => prev + ' 😊')}
+            onPress={onOpenPollModal}
           >
-            <SmileyIcon size={22} color={COLORS.textMuted} />
+            <WhatsAppPaperclipIcon size={21} color="#8696A0" />
+          </TouchableOpacity>
+
+          {/* WhatsApp Camera button inside pill */}
+          <TouchableOpacity
+            style={styles.inlineActionIcon}
+            activeOpacity={0.7}
+            onPress={onOpenPollModal}
+          >
+            <WhatsAppCameraIcon size={21} color="#8696A0" />
           </TouchableOpacity>
         </View>
 
-        {/* Mic button */}
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-          <MicIcon size={20} color={COLORS.textSecondary} />
-        </TouchableOpacity>
-
-        {/* Send button */}
-        <Animated.View style={{ transform: [{ scale: sendScale }] }}>
-          <TouchableOpacity
-            onPress={handleSend}
-            disabled={!canSend}
-            activeOpacity={0.85}
-          >
-            <View
-              style={[
-                styles.sendBtn,
-                canSend ? styles.sendBtnActive : styles.sendBtnInactive,
-              ]}
+        {/* WhatsApp-Style Circular Action Button: Green circle with Mic or Paper Plane */}
+        {canSend ? (
+          <Animated.View style={{ transform: [{ scale: sendScale }] }}>
+            <TouchableOpacity
+              onPress={handleSend}
+              activeOpacity={0.85}
+              style={styles.actionCircleBtn}
             >
-              <ArrowUpIcon size={18} color={canSend ? COLORS.white : COLORS.textMuted} />
-            </View>
+              <WhatsAppSendIcon size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </Animated.View>
+        ) : (
+          <TouchableOpacity
+            style={styles.actionCircleBtn}
+            activeOpacity={0.8}
+            onPress={() => {}}
+          >
+            <WhatsAppMicIcon size={22} color="#111B21" />
           </TouchableOpacity>
-        </Animated.View>
+        )}
       </View>
+
+      {/* WhatsApp-Style Categorized Emoji Keyboard Drawer */}
+      {showEmojiPicker && (
+        <EmojiPickerBoard
+          onSelectEmoji={handleInsertEmoji}
+          onBackspace={handleBackspace}
+          onClose={() => setShowEmojiPicker(false)}
+        />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#0d121e',
-    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+    backgroundColor: '#0b141a',
+    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
   },
   topLine: {
     height: 1,
-    backgroundColor: COLORS.borderGlass,
+    backgroundColor: '#1f2c34',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    gap: 8,
-  },
-  actionBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.white06,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 6,
   },
   inputPill: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#151c2c',
-    borderRadius: 22,
+    backgroundColor: '#1f2c34',
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: COLORS.borderGlass,
-    paddingHorizontal: 14,
-    height: 44,
+    borderColor: '#1f2c34',
+    paddingHorizontal: 10,
+    height: 48,
   },
   inputPillFocused: {
-    borderColor: 'rgba(0, 210, 255, 0.5)',
-    ...Platform.select({
-      web: { boxShadow: '0 0 10px rgba(0, 212, 255, 0.2)' },
-      default: {
-        shadowColor: COLORS.accentCyan,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-        elevation: 6,
-      },
-    }),
+    borderColor: '#00a884',
   },
   input: {
     flex: 1,
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    lineHeight: 20,
+    fontSize: 16,
+    color: '#E9EDEF',
+    lineHeight: 22,
     padding: 0,
     margin: 0,
     fontWeight: FONTS.regular,
     maxHeight: 100,
   },
-  inlineAction: {
-    padding: 4,
-    marginLeft: 4,
+  inlineActionLeft: {
+    padding: 6,
+    marginRight: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  inlineActionIcon: {
+    padding: 6,
+    marginHorizontal: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionCircleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#00A884',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  sendBtnActive: {
-    backgroundColor: COLORS.accentCyan,
     ...Platform.select({
-      web: { boxShadow: '0 0 15px rgba(0, 210, 255, 0.4)' },
+      web: { boxShadow: '0 2px 8px rgba(0, 168, 132, 0.4)' },
       default: {
-        shadowColor: COLORS.accentCyan,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 15,
-        elevation: 8,
+        shadowColor: '#00A884',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.35,
+        shadowRadius: 6,
+        elevation: 4,
       },
     }),
-  },
-  sendBtnInactive: {
-    backgroundColor: COLORS.white06,
   },
   replyingBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#121826',
+    backgroundColor: '#1f2c34',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 212, 255, 0.2)',
+    borderTopColor: 'rgba(0, 168, 132, 0.3)',
   },
   replyingAccent: {
-    width: 3,
-    height: 32,
+    width: 4,
+    height: 34,
     borderRadius: 2,
-    backgroundColor: COLORS.accentCyan,
+    backgroundColor: '#00A884',
     marginRight: 10,
   },
   replyingContent: {
@@ -401,13 +426,13 @@ const styles = StyleSheet.create({
   },
   replyingUser: {
     fontSize: 12,
-    color: COLORS.accentCyan,
+    color: '#00A884',
     fontWeight: FONTS.bold,
     marginBottom: 2,
   },
   replyingText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: '#8696A0',
   },
   cancelReplyBtn: {
     padding: 6,
@@ -416,7 +441,7 @@ const styles = StyleSheet.create({
   },
   cancelReplyText: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: '#8696A0',
     fontWeight: FONTS.bold,
   },
 });
