@@ -169,6 +169,112 @@ const registerChatHandlers = (io, socket) => {
   });
 
   /**
+   * Event: message:react
+   */
+  socket.on('message:react', async (payload = {}) => {
+    try {
+      const { messageId, emoji, userId, username, room = 'global' } = payload;
+      if (!messageId || !emoji || !userId) return;
+
+      const message = await Message.findById(messageId);
+      if (!message) return;
+
+      const strUserId = userId.toString();
+      let reactionIndex = message.reactions.findIndex((r) => r.emoji === emoji);
+
+      if (reactionIndex > -1) {
+        const reaction = message.reactions[reactionIndex];
+        const userIndex = reaction.users.findIndex((u) => u.toString() === strUserId);
+
+        if (userIndex > -1) {
+          reaction.users.splice(userIndex, 1);
+          if (reaction.usernames) {
+            const uIdx = reaction.usernames.indexOf(username);
+            if (uIdx > -1) reaction.usernames.splice(uIdx, 1);
+          }
+          reaction.count = reaction.users.length;
+          if (reaction.count <= 0) {
+            message.reactions.splice(reactionIndex, 1);
+          }
+        } else {
+          reaction.users.push(userId);
+          if (username) reaction.usernames.push(username);
+          reaction.count = reaction.users.length;
+        }
+      } else {
+        message.reactions.push({
+          emoji,
+          count: 1,
+          users: [userId],
+          usernames: username ? [username] : []
+        });
+      }
+
+      await message.save();
+
+      io.to(room).emit('message:reaction_updated', {
+        messageId: message._id,
+        reactions: message.reactions,
+        room
+      });
+    } catch (err) {
+      logger.error('Error in message:react socket handler:', err);
+    }
+  });
+
+  /**
+   * Event: poll:vote
+   */
+  socket.on('poll:vote', async (payload = {}) => {
+    try {
+      const { messageId, optionId, userId, username, room = 'global' } = payload;
+      if (!messageId || !optionId || !userId) return;
+
+      const message = await Message.findById(messageId);
+      if (!message || message.type !== 'poll' || !message.poll) return;
+
+      const strUserId = userId.toString();
+      let previouslyVotedOptionId = null;
+
+      message.poll.options.forEach((opt) => {
+        const idx = opt.votes.findIndex((v) => v.toString() === strUserId);
+        if (idx > -1) {
+          opt.votes.splice(idx, 1);
+          if (opt.voteUsernames) {
+            const uIdx = opt.voteUsernames.indexOf(username);
+            if (uIdx > -1) opt.voteUsernames.splice(uIdx, 1);
+          }
+          previouslyVotedOptionId = opt.id;
+        }
+      });
+
+      if (previouslyVotedOptionId !== optionId) {
+        const targetOption = message.poll.options.find((opt) => opt.id === optionId);
+        if (targetOption) {
+          targetOption.votes.push(userId);
+          if (username) targetOption.voteUsernames.push(username);
+        }
+      }
+
+      message.poll.totalVotes = message.poll.options.reduce(
+        (sum, opt) => sum + opt.votes.length,
+        0
+      );
+
+      message.markModified('poll');
+      await message.save();
+
+      io.to(room).emit('poll:vote_updated', {
+        messageId: message._id,
+        poll: message.poll,
+        room
+      });
+    } catch (err) {
+      logger.error('Error in poll:vote socket handler:', err);
+    }
+  });
+
+  /**
    * Event: disconnect
    */
   socket.on('disconnect', async () => {

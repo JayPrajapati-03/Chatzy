@@ -26,7 +26,9 @@ const useSocket = ({
   onConnect,
   onDisconnect,
   onMsgDelivered,
-  onMsgRead
+  onMsgRead,
+  onReactionUpdated,
+  onPollVoteUpdated
 } = {}) => {
   // Use ref so that stale-closure callbacks always get the latest handlers
   const handlers = useRef({});
@@ -38,7 +40,9 @@ const useSocket = ({
     onConnect,
     onDisconnect,
     onMsgDelivered,
-    onMsgRead
+    onMsgRead,
+    onReactionUpdated,
+    onPollVoteUpdated
   };
 
   useEffect(() => {
@@ -71,6 +75,8 @@ const useSocket = ({
     const onUsersOnlineFn = (list) => handle('onUsersOnline', list);
     const onDelivered = (data) => handle('onMsgDelivered', data);
     const onRead = (data) => handle('onMsgRead', data);
+    const onReaction = (data) => handle('onReactionUpdated', data);
+    const onPollVote = (data) => handle('onPollVoteUpdated', data);
 
     socket.on('connect', onConn);
     socket.on('disconnect', onDisconn);
@@ -80,6 +86,8 @@ const useSocket = ({
     socket.on('users:online', onUsersOnlineFn);
     socket.on('message:delivered', onDelivered);
     socket.on('message:read', onRead);
+    socket.on('message:reaction_updated', onReaction);
+    socket.on('poll:vote_updated', onPollVote);
 
     // If already connected (e.g. reconnected), emit join immediately
     if (socket.connected) onConn();
@@ -93,6 +101,8 @@ const useSocket = ({
       socket.off('users:online', onUsersOnlineFn);
       socket.off('message:delivered', onDelivered);
       socket.off('message:read', onRead);
+      socket.off('message:reaction_updated', onReaction);
+      socket.off('poll:vote_updated', onPollVote);
     };
   }, [user]);
 
@@ -150,7 +160,44 @@ const useSocket = ({
     [user]
   );
 
-  return { emitTypingStart, emitTypingStop, emitJoin, emitMsgRead, emitMsgDelivered, socket: getSocket() };
+  const emitReaction = useCallback(
+    (messageId, emoji) => {
+      if (!user || !messageId || !emoji) return;
+      getSocket().emit('message:react', {
+        messageId,
+        emoji,
+        userId: user._id,
+        username: user.username,
+        room: DEFAULT_ROOM
+      });
+    },
+    [user]
+  );
+
+  const emitPollVote = useCallback(
+    (messageId, optionId) => {
+      if (!user || !messageId || !optionId) return;
+      getSocket().emit('poll:vote', {
+        messageId,
+        optionId,
+        userId: user._id,
+        username: user.username,
+        room: DEFAULT_ROOM
+      });
+    },
+    [user]
+  );
+
+  return {
+    emitTypingStart,
+    emitTypingStop,
+    emitJoin,
+    emitMsgRead,
+    emitMsgDelivered,
+    emitReaction,
+    emitPollVote,
+    socket: getSocket()
+  };
 };
 
 export default useSocket;

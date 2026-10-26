@@ -129,9 +129,17 @@ const ArrowUpIcon = ({ size = 18, color = '#fff' }) => {
 };
 
 /**
- * Premium MessageInput — flagship composer dock with attach, emoji, mic, and send.
+ * Premium MessageInput — flagship composer dock with attach, emoji, mic, send, and reply banner.
  */
-const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
+const MessageInput = ({
+  onSend,
+  onTypingStart,
+  onTypingStop,
+  disabled,
+  replyingTo,
+  onCancelReply,
+  onOpenPollModal,
+}) => {
   const [text, setText] = useState('');
   const [focused, setFocused] = useState(false);
   const typingTimerRef = useRef(null);
@@ -166,6 +174,13 @@ const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
     const trimmed = text.trim();
     if (!trimmed || disabled) return;
 
+    // Check if user typed /poll command
+    if (trimmed.toLowerCase() === '/poll') {
+      setText('');
+      onOpenPollModal?.();
+      return;
+    }
+
     // Pop animation
     Animated.sequence([
       Animated.spring(sendScale, { toValue: 0.82, speed: 80, useNativeDriver: nd }),
@@ -178,19 +193,45 @@ const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
       onTypingStop?.();
     }
     setText('');
-    onSend(trimmed);
-  }, [text, disabled, onSend, onTypingStop, sendScale]);
+    onSend(trimmed, replyingTo);
+  }, [text, disabled, onSend, onTypingStop, sendScale, replyingTo, onOpenPollModal]);
 
   const canSend = text.trim().length > 0 && !disabled;
 
   return (
     <View style={styles.container}>
+      {/* Quoted Replying Banner */}
+      {replyingTo && (
+        <View style={styles.replyingBar}>
+          <View style={styles.replyingAccent} />
+          <View style={styles.replyingContent}>
+            <Text style={styles.replyingUser}>
+              Replying to @{replyingTo.senderUsername || 'User'}
+            </Text>
+            <Text style={styles.replyingText} numberOfLines={1}>
+              {replyingTo.text}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.cancelReplyBtn}
+            onPress={onCancelReply}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.cancelReplyText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Top separator */}
       <View style={styles.topLine} />
 
       <View style={styles.row}>
-        {/* Attach button */}
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
+        {/* Attach button (Opens Live Poll modal or actions) */}
+        <TouchableOpacity
+          style={styles.actionBtn}
+          activeOpacity={0.7}
+          onPress={onOpenPollModal}
+        >
           <PlusIcon size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
 
@@ -203,7 +244,13 @@ const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
             onSubmitEditing={handleSend}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder={disabled ? 'No connection…' : 'Type a message…'}
+            placeholder={
+              disabled
+                ? 'No connection…'
+                : replyingTo
+                ? 'Type your reply…'
+                : 'Type a message (or /poll)…'
+            }
             placeholderTextColor={COLORS.textMuted}
             multiline
             maxLength={MESSAGE_MAX_LENGTH}
@@ -212,7 +259,11 @@ const MessageInput = ({ onSend, onTypingStart, onTypingStop, disabled }) => {
             editable={!disabled}
             selectionColor={COLORS.accentCyan}
           />
-          <TouchableOpacity style={styles.inlineAction} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.inlineAction}
+            activeOpacity={0.7}
+            onPress={() => setText((prev) => prev + ' 😊')}
+          >
             <SmileyIcon size={22} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
@@ -328,6 +379,45 @@ const styles = StyleSheet.create({
   },
   sendBtnInactive: {
     backgroundColor: COLORS.white06,
+  },
+  replyingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#121826',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 212, 255, 0.2)',
+  },
+  replyingAccent: {
+    width: 3,
+    height: 32,
+    borderRadius: 2,
+    backgroundColor: COLORS.accentCyan,
+    marginRight: 10,
+  },
+  replyingContent: {
+    flex: 1,
+  },
+  replyingUser: {
+    fontSize: 12,
+    color: COLORS.accentCyan,
+    fontWeight: FONTS.bold,
+    marginBottom: 2,
+  },
+  replyingText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  cancelReplyBtn: {
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  cancelReplyText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: FONTS.bold,
   },
 });
 

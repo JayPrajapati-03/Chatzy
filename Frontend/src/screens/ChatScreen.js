@@ -25,7 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { useAuth } from '../context/AuthContext';
 import useSocket from '../socket/useSocket';
-import { getMessages, sendMessage } from '../api/messageApi';
+import { getMessages, sendMessage, reactToMessage, votePoll } from '../api/messageApi';
 import { connectSocket } from '../socket/socket';
 
 import MessageBubble from '../components/MessageBubble';
@@ -34,6 +34,7 @@ import TypingIndicator from '../components/TypingIndicator';
 import OnlineUsersBar  from '../components/OnlineUsersBar';
 import ConnectionBanner from '../components/ConnectionBanner';
 import ActiveMembersModal from '../components/ActiveMembersModal';
+import CreatePollModal from '../components/CreatePollModal';
 
 import { COLORS, GRADIENTS, DEFAULT_ROOM, HISTORY_LIMIT, FONTS, RADIUS, SHADOW } from '../utils/constants';
 import { formatDateLabel, isDifferentDay } from '../utils/formatTime';
@@ -177,6 +178,8 @@ export default function ChatScreen() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showPollModal,    setShowPollModal]    = useState(false);
+  const [replyingTo,       setReplyingTo]       = useState(null);
 
   const msgIdSet   = useRef(new Set());
   const flatListRef = useRef(null);
@@ -308,22 +311,148 @@ export default function ChatScreen() {
     );
   }, []);
 
-  const { emitTypingStart, emitTypingStop, emitMsgDelivered, emitMsgRead } = useSocket({
+  const handleReactionUpdated = useCallback(({ messageId, reactions }) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        String(m._id) === String(messageId) ? { ...m, reactions } : m
+      )
+    );
+  }, []);
+
+  const handlePollVoteUpdated = useCallback(({ messageId, poll }) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        String(m._id) === String(messageId) ? { ...m, poll } : m
+      )
+    );
+  }, []);
+
+  const {
+    emitTypingStart,
+    emitTypingStop,
+    emitMsgDelivered,
+    emitMsgRead,
+    emitReaction,
+    emitPollVote,
+  } = useSocket({
     user,
-    onMessage:      handleNewMessage,
-    onTypingStart:  handleTypingStart,
-    onTypingStop:   handleTypingStop,
-    onUsersOnline:  handleUsersOnline,
-    onConnect:      handleConnect,
-    onDisconnect:   handleDisconnect,
-    onMsgDelivered: handleMsgDelivered,
-    onMsgRead:      handleMsgRead,
+    onMessage:          handleNewMessage,
+    onTypingStart:      handleTypingStart,
+    onTypingStop:       handleTypingStop,
+    onUsersOnline:      handleUsersOnline,
+    onConnect:          handleConnect,
+    onDisconnect:       handleDisconnect,
+    onMsgDelivered:     handleMsgDelivered,
+    onMsgRead:          handleMsgRead,
+    onReactionUpdated:  handleReactionUpdated,
+    onPollVoteUpdated:  handlePollVoteUpdated,
   });
 
   // Keep emitters accessible inside callbacks via ref
   useEffect(() => {
-    emittersRef.current = { emitMsgDelivered, emitMsgRead };
-  }, [emitMsgDelivered, emitMsgRead]);
+    emittersRef.current = {
+      emitMsgDelivered,
+      emitMsgRead,
+      emitReaction,
+      emitPollVote,
+    };
+  }, [emitMsgDelivered, emitMsgRead, emitReaction, emitPollVote]);
+
+  // Handle reaction toggle
+  const handleToggleReaction = useCallback(
+    async (messageId, emoji) => {
+      if (!user) return;
+      emittersRef.current.emitReaction?.(messageId, emoji);
+      try {
+        await reactToMessage(messageId, {
+          emoji,
+          userId: user._id,
+          username: user.username,
+        });
+      } catch (err) {
+        console.warn('Reaction error:', err.message);
+      }
+    },
+    [user]
+  );
+
+  // Handle poll vote
+  const handleVotePoll = useCallback(
+    async (messageId, optionId) => {
+      if (!user) return;
+      emittersRef.current.emitPollVote?.(messageId, optionId);
+      try {
+        await votePoll(messageId, {
+          optionId,
+          userId: user._id,
+          username: user.username,
+        });
+      } catch (err) {
+        console.warn('Poll vote error:', err.message);
+      }
+    },
+    [user]
+  );
+
+  // Handle replies
+  const handleStartReply = useCallback((message) => {
+    setReplyingTo({
+      messageId: message._id,
+      senderUsername: message.senderDisplayName || message.senderUsername,
+      text: message.text,
+    });
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
+
+  // Handle poll creation
+  const handleCreatePoll = useCallback(
+    async (pollData) => {
+      if (!user) return;
+      const tempId = `temp_poll_${Date.now()}`;
+      const optimistic = {
+        _id: tempId,
+        senderId: user._id,
+        senderUsername: user.username,
+        senderDisplayName: user.displayName,
+        senderAvatarColor: user.avatarColor,
+        text: `📊 Poll: ${pollData.question}`,
+        type: 'poll',
+        poll: pollData,
+        room: DEFAULT_ROOM,
+        status: 'sent',
+        createdAt: new Date().toISOString(),
+      };
+      msgIdSet.current.add(tempId);
+      setMessages((prev) => [...prev, optimistic]);
+      scrollToEnd();
+
+      try {
+        const saved = await sendMessage({
+          senderId: user._id,
+          senderUsername: user.username,
+          senderDisplayName: user.displayName,
+          senderAvatarColor: user.avatarColor,
+          text: `📊 Poll: ${pollData.question}`,
+          type: 'poll',
+          poll: pollData,
+          room: DEFAULT_ROOM,
+        });
+        msgIdSet.current.delete(tempId);
+        msgIdSet.current.add(saved._id);
+        setMessages((prev) =>
+          prev.map((m) => (m._id === tempId ? saved : m))
+        );
+      } catch (err) {
+        setMessages((prev) => prev.filter((m) => m._id !== tempId));
+        msgIdSet.current.delete(tempId);
+        Alert.alert('Poll Error', err.message || 'Could not launch poll.');
+      }
+    },
+    [user, scrollToEnd]
+  );
 
   // Mark all unread messages from others as read when screen is active or comes to foreground
   useEffect(() => {
@@ -358,8 +487,11 @@ export default function ChatScreen() {
 
   // Send
   const handleSend = useCallback(
-    async (text) => {
+    async (text, replyTo) => {
       if (!user) return;
+      const currentReplyTo = replyTo || replyingTo;
+      setReplyingTo(null);
+
       const tempId = `temp_${Date.now()}`;
       const optimistic = {
         _id: tempId,
@@ -368,6 +500,13 @@ export default function ChatScreen() {
         senderDisplayName: user.displayName,
         senderAvatarColor: user.avatarColor,
         text,
+        replyTo: currentReplyTo
+          ? {
+              messageId: currentReplyTo.messageId,
+              senderUsername: currentReplyTo.senderUsername,
+              text: currentReplyTo.text,
+            }
+          : undefined,
         room: DEFAULT_ROOM,
         status: 'sent',
         createdAt: new Date().toISOString(),
@@ -375,6 +514,7 @@ export default function ChatScreen() {
       msgIdSet.current.add(tempId);
       setMessages((prev) => [...prev, optimistic]);
       scrollToEnd();
+
       try {
         const saved = await sendMessage({
           senderId: user._id,
@@ -382,6 +522,13 @@ export default function ChatScreen() {
           senderDisplayName: user.displayName,
           senderAvatarColor: user.avatarColor,
           text,
+          replyTo: currentReplyTo
+            ? {
+                messageId: currentReplyTo.messageId,
+                senderUsername: currentReplyTo.senderUsername,
+                text: currentReplyTo.text,
+              }
+            : undefined,
           room: DEFAULT_ROOM,
         });
         msgIdSet.current.delete(tempId);
@@ -414,11 +561,11 @@ export default function ChatScreen() {
         Alert.alert(
           'Failed to Send',
           err.message || 'Check your connection and try again.',
-          [{ text: 'OK' }, { text: 'Retry', onPress: () => handleSend(text) }]
+          [{ text: 'OK' }, { text: 'Retry', onPress: () => handleSend(text, currentReplyTo) }]
         );
       }
     },
-    [user, scrollToEnd]
+    [user, replyingTo, scrollToEnd]
   );
 
   // List data with date separators
@@ -446,10 +593,14 @@ export default function ChatScreen() {
           message={item.data}
           isMine={isMine}
           isSenderOnline={isSenderOnline}
+          currentUserId={user?._id}
+          onReply={handleStartReply}
+          onReaction={handleToggleReaction}
+          onVotePoll={handleVotePoll}
         />
       );
     },
-    [user, onlineUsers]
+    [user, onlineUsers, handleStartReply, handleToggleReaction, handleVotePoll]
   );
 
   const keyExtractor = useCallback((item) => item.id, []);
@@ -578,6 +729,9 @@ export default function ChatScreen() {
           onTypingStart={emitTypingStart}
           onTypingStop={emitTypingStop}
           disabled={connStatus === 'disconnected'}
+          replyingTo={replyingTo}
+          onCancelReply={handleCancelReply}
+          onOpenPollModal={() => setShowPollModal(true)}
         />
       </KeyboardAvoidingView>
 
@@ -630,6 +784,13 @@ export default function ChatScreen() {
         onClose={() => setShowMembersModal(false)}
         users={onlineUsers}
         currentUser={user}
+      />
+
+      {/* ── Create Live Poll Modal ─────────────────────────────────────── */}
+      <CreatePollModal
+        visible={showPollModal}
+        onClose={() => setShowPollModal(false)}
+        onCreatePoll={handleCreatePoll}
       />
     </SafeAreaView>
   );

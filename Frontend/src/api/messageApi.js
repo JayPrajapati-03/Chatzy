@@ -38,3 +38,25 @@ export const markMessageRead = async (messageId, reader) => {
   const { data } = await client.post(`/api/messages/${messageId}/read`, reader);
   return data.data;
 };
+
+/**
+ * POST /api/messages/:id/react
+ * Toggle an emoji reaction on a message.
+ * @param {string} messageId
+ * @param {{ emoji, userId, username }} payload
+ */
+export const reactToMessage = async (messageId, payload) => {
+  const { data } = await client.post(`/api/messages/${messageId}/react`, payload);
+  return data.data;
+};
+
+/**
+ * POST /api/messages/:id/poll/vote
+ * Cast or toggle a vote on a poll option.
+ * @param {string} messageId
+ * @param {{ optionId, userId, username }} payload
+ */
+export const votePoll = async (messageId, payload) => {
+  const { data } = await client.post(`/api/messages/${messageId}/poll/vote`, payload);
+  return data.data;
+};
