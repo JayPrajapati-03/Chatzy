@@ -253,7 +253,7 @@ const MessageInput = ({
             />
           </TouchableOpacity>
 
-          {/* Main Text Input */}
+          {/* Main Text Input — Locked to exact same horizontal center line */}
           <TextInput
             ref={inputRef}
             style={styles.input}
@@ -273,7 +273,6 @@ const MessageInput = ({
                 : 'Message'
             }
             placeholderTextColor="#8696A0"
-            multiline
             maxLength={MESSAGE_MAX_LENGTH}
             returnKeyType="send"
             blurOnSubmit={false}
@@ -356,10 +355,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1f2c34',
-    borderRadius: 25,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#1f2c34',
-    paddingHorizontal: 10,
+    paddingLeft: 6,
+    paddingRight: 6,
     height: 48,
   },
   inputPillFocused: {
@@ -367,23 +367,33 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: 48,
     fontSize: 16,
     color: '#E9EDEF',
-    lineHeight: 22,
-    padding: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
     margin: 0,
     fontWeight: FONTS.regular,
-    maxHeight: 100,
+    textAlignVertical: 'center',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+        lineHeight: '48px',
+      },
+      default: {
+        lineHeight: 22,
+      },
+    }),
   },
   inlineActionLeft: {
-    padding: 6,
-    marginRight: 4,
+    width: 36,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
   inlineActionIcon: {
-    padding: 6,
-    marginHorizontal: 2,
+    width: 34,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
   },
